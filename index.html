@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Goldfish Pond Population Dynamics</title>
+    <!-- Embedded CSS for styling the page -->
     <style>
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -703,9 +704,10 @@
             // Disable Start button and enable Stop button.
             startButton.disabled = true;
             stopButton.disabled = false;
-            // Other buttons like Get Insight and Generate Bifurcation remain enabled or disabled based on their last state.
+            getInsightButton.disabled = false; // LLM button remains active
+            generateBifurcationButton.disabled = false; // Bifurcation button remains active
 
-            console.log("Buttons state: Start disabled, Stop enabled.");
+            console.log("Buttons state: Start disabled, Stop enabled, AI & Bifurcation enabled.");
 
             // Set up the recurring interval for running simulation steps.
             try {
@@ -738,8 +740,9 @@
             // Update button states after stopping the simulation.
             startButton.disabled = false; // Enable start button.
             stopButton.disabled = true; // Disable stop button.
-            // Other buttons like Get Insight and Generate Bifurcation remain enabled.
-            console.log("Buttons state: Start enabled, Stop disabled.");
+            getInsightButton.disabled = false; // Ensure AI Insight button is enabled.
+            generateBifurcationButton.disabled = false; // Ensure Bifurcation button is enabled.
+            console.log("Buttons state: Start enabled, Stop disabled, AI & Bifurcation enabled.");
 
             // Stop the pond animation requestFrame loop if it's active.
             if (pondAnimationFrameId) {
@@ -1250,7 +1253,7 @@
 
             const chatHistory = [{ role: "user", parts: [{ text: prompt }] }];
             const payload = { contents: chatHistory };
-            const apiKey = "AIzaSyBe4FaOSzP9GaqTpcvW8lV-wKRu9nH82sA"; // Canvas will provide this API key at runtime
+            const apiKey = ""; // Canvas will provide this API key at runtime
 
             const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
 
