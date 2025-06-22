@@ -824,7 +824,7 @@
             // Draw Moving Average Line if enabled and enough data points exist for the window
             if (movingAverageEnabled && populationHistory.length >= movingAverageWindow) {
                 populationChartCtx.beginPath();
-                populationChartCtx.strokeStyle = '#000000'; // Black color for moving average
+                populationChartCtx.strokeStyle = '#000000'; // Black for moving average
                 populationChartCtx.lineWidth = 2;
                 populationChartCtx.setLineDash([5, 5]); // Dashed line for distinction
 
@@ -1356,39 +1356,136 @@
          * It initializes the simulation and sets up global event listeners.
          */
         window.onload = function() {
-            initializeSimulation(); // Perform initial setup of the simulation and UI
+            // --- Attach Event Listeners ---
+            // It is crucial to attach event listeners AFTER the DOM elements are guaranteed to exist,
+            // which is why this is done within window.onload.
+
+            if (startButton) {
+                startButton.addEventListener('click', () => {
+                    console.log("Start button clicked. Attempting to start simulation.");
+                    startSimulation();
+                });
+                console.log("Start button event listener attached.");
+            } else {
+                console.error("Start button element not found!");
+            }
+
+            if (stopButton) {
+                stopButton.addEventListener('click', () => {
+                    console.log("Stop button clicked. Attempting to stop simulation.");
+                    stopSimulation();
+                });
+                console.log("Stop button event listener attached.");
+            } else {
+                console.error("Stop button element not found!");
+            }
+
+            if (resetButton) {
+                resetButton.addEventListener('click', () => {
+                    console.log("Reset button clicked. Stopping and re-initializing simulation.");
+                    stopSimulation();
+                    initializeSimulation();
+                });
+                console.log("Reset button event listener attached.");
+            } else {
+                console.error("Reset button element not found!");
+            }
+
+            if (getInsightButton) {
+                getInsightButton.addEventListener('click', getPopulationInsight);
+                console.log("Get Insight button event listener attached.");
+            } else {
+                console.error("Get Insight button element not found!");
+            }
+
+            if (generateBifurcationButton) {
+                generateBifurcationButton.addEventListener('click', generateBifurcationDiagram);
+                console.log("Generate Bifurcation button event listener attached.");
+            } else {
+                console.error("Generate Bifurcation button element not found!");
+            }
+
+            // Slider event listeners
+            growthRateSlider.addEventListener('input', () => {
+                growthRateValueSpan.textContent = growthRateSlider.value;
+                r = parseFloat(growthRateSlider.value);
+                if (!simulationInterval) {
+                    currentGrowthRateSpan.textContent = r.toFixed(2);
+                }
+                drawReturnMap(); // Update parabola visually if not simulating
+                console.log(`Growth rate slider adjusted: ${r}`);
+            });
+
+            initialPopulationSlider.addEventListener('input', () => {
+                initialPopulationValueSpan.textContent = initialPopulationSlider.value;
+                if (!simulationInterval) {
+                    x = parseFloat(initialPopulationSlider.value);
+                    currentPopulationXSpan.textContent = x.toFixed(4);
+                    populationHistory[0] = x;
+                    drawChart();
+                    initializePond(); // Re-initialize pond on initial population change
+                    drawReturnMap(); // Redraw return map
+                }
+                console.log(`Initial population slider adjusted: ${x}`);
+            });
+
+            randomnessFactorSlider.addEventListener('input', () => {
+                randomnessFactorValueSpan.textContent = randomnessFactorSlider.value;
+                randomnessFactor = parseFloat(randomnessFactorSlider.value);
+                console.log(`Randomness factor slider adjusted: ${randomnessFactor}`);
+            });
+
+            randomnessFrequencySlider.addEventListener('input', () => {
+                randomnessFrequencyValueSpan.textContent = randomnessFrequencySlider.value;
+                randomnessFrequency = parseFloat(randomnessFrequencySlider.value);
+                console.log(`Randomness frequency slider adjusted: ${randomnessFrequency}`);
+            });
+
+            movingAverageEnabledCheckbox.addEventListener('change', () => {
+                movingAverageEnabled = movingAverageEnabledCheckbox.checked;
+                drawChart();
+                console.log(`Moving Average Enabled: ${movingAverageEnabled}`);
+            });
+
+            movingAverageWindowSlider.addEventListener('input', () => {
+                movingAverageWindow = parseInt(movingAverageWindowSlider.value);
+                movingAverageWindowValueSpan.textContent = movingAverageWindowSlider.value;
+                drawChart();
+                console.log(`Moving Average Window: ${movingAverageWindow}`);
+            });
+
+
+            // Perform initial simulation setup on page load.
+            initializeSimulation();
             console.log("Script loaded and initial simulation state set. Ready to start.");
 
-            // Add a resize listener to ensure all canvases are responsive
+            // Add a resize listener for all canvases to ensure responsiveness.
             window.addEventListener('resize', () => {
-                // Adjust pond canvas dimensions
+                // Adjust all canvas dimensions, maintaining aspect ratio for charts.
                 if (pondCanvas) {
                     const container = pondCanvas.parentElement;
                     pondCanvas.width = container.clientWidth;
                     pondCanvas.height = container.clientHeight;
                 }
-                // Adjust population chart canvas dimensions, maintaining aspect ratio
                 if (populationChartCanvas) {
                     const container = populationChartCanvas.parentElement;
                     populationChartCanvas.width = container.clientWidth;
                     populationChartCanvas.height = container.clientWidth * (400/800);
                 }
-                // Adjust return map canvas dimensions, maintaining aspect ratio
                 if (returnMapCanvas) {
                     const container = returnMapCanvas.parentElement;
                     returnMapCanvas.width = container.clientWidth;
                     returnMapCanvas.height = container.clientWidth * (400/800);
                 }
-                // Adjust bifurcation map canvas dimensions, maintaining aspect ratio
                 if (bifurcationMapCanvas) {
                     const container = bifurcationMapCanvas.parentElement;
                     bifurcationMapCanvas.width = container.clientWidth;
                     bifurcationMapCanvas.height = container.clientWidth * (400/800);
-                    drawBifurcationMapInitialState(); // Redraw labels and initial state for resizing
+                    drawBifurcationMapInitialState(); // Redraw labels for resizing
                 }
 
-                drawChart(); // Redraw the time series chart
-                initializePond(); // Re-initialize pond to distribute fish correctly on resize
+                drawChart(); // Redraw charts on resize
+                initializePond(); // Re-initialize pond to redistribute fish correctly on resize
                 drawReturnMap(); // Redraw return map (clears old points and draws axes/parabola)
             });
         };
