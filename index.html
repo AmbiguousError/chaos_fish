@@ -370,7 +370,7 @@
 <body>
     <div class="container">
         <h1>Goldfish Pond Population Dynamics</h1>
-        <p>This simulation visually demonstrates the **Butterfly Effect** as it applies to a goldfish pond population, illustrating the core principles of **chaos theory** and the influence of **randomness**. While our underlying population growth rule is simple and deterministic (the logistic map), you'll observe how tiny, almost imperceptible differences in starting conditions for the goldfish population, coupled with random external disturbances, can lead to wildly divergent and unpredictable long-term outcomes. This highlights that even for seemingly simple systems, precise long-term prediction can be impossible, revealing patterns of structured unpredictability. Adjust the parameters to actively explore how the pond's population shifts between stable, oscillating, and truly chaotic behaviors.</p>
+        <p>This simulation visually demonstrates the **Butterfly Effect** as it applies to a goldfish pond population, illustrating the core principles of **chaos theory** and the influence of **randomness**. While our underlying population growth rule is simple and deterministic (the logistic map), you'll observe how tiny, almost imperceptible differences in starting conditions for the goldfish population, coupled with random external disturbances, can lead to wildly divergent and unpredictable long-term outcomes. This highlights that even for seemingly simple systems, precise long-term prediction can be impossible, revealing patterns of structured unpredictability. Adjust the parameters to actively explore how the pond's population shifts between stable, oscillating, and truly chaotic states.</p>
 
         <div class="controls">
             <!-- Control group for Growth Rate (r) -->
@@ -401,6 +401,18 @@
                 <span id="randomnessFrequencyValue">0.1</span>
                 <p class="description">The probability (0 to 1) that a random event occurs during each simulation step. (Range: 0.0 - 1.0)</p>
             </div>
+
+            <!-- New control group for Moving Average -->
+            <div class="control-group">
+                <label for="movingAverageEnabled">
+                    <input type="checkbox" id="movingAverageEnabled"> Show Moving Average
+                </label>
+                <label for="movingAverageWindow" style="margin-top: 10px;">Window Length:</label>
+                <input type="range" id="movingAverageWindow" min="2" max="50" step="1" value="10">
+                <span id="movingAverageWindowValue">10</span>
+                <p class="description">Number of data points for the moving average calculation.</p>
+            </div>
+
 
             <!-- Action buttons for the simulation -->
             <button id="startButton">Start Simulation</button>
@@ -468,6 +480,11 @@
         const llmOutputTitle = llmOutputArea.querySelector('h3'); // Reference the h3 for dynamic title
         const llmOutputText = document.getElementById('llmOutputText');
 
+        // New Moving Average DOM elements
+        const movingAverageEnabledCheckbox = document.getElementById('movingAverageEnabled');
+        const movingAverageWindowSlider = document.getElementById('movingAverageWindow');
+        const movingAverageWindowValueSpan = document.getElementById('movingAverageWindowValue');
+
 
         const currentGenerationSpan = document.getElementById('currentGeneration');
         const currentPopulationXSpan = document.getElementById('currentPopulationX');
@@ -517,6 +534,10 @@
         const populationHistory = []; // Array to store historical population values for charting
         const maxDataPoints = 200; // Maximum number of data points to display on the graph
 
+        // Moving Average Variables
+        let movingAverageEnabled = false;
+        let movingAverageWindow = 10;
+
         // Pond Animation Variables
         const maxPondFish = 150; // Maximum number of fish to display in the pond
         let pondFish = []; // Array to store individual fish objects {x, y, dx, dy, color, size}
@@ -529,6 +550,10 @@
             x = parseFloat(initialPopulationSlider.value);
             randomnessFactor = parseFloat(randomnessFactorSlider.value);
             randomnessFrequency = parseFloat(randomnessFrequencySlider.value);
+            // Initialize moving average settings from controls
+            movingAverageEnabled = movingAverageEnabledCheckbox.checked;
+            movingAverageWindow = parseInt(movingAverageWindowSlider.value);
+
 
             generation = 0; // Reset generation count
             populationHistory.length = 0; // Clear any previous population data
@@ -657,6 +682,10 @@
             if (!simulationInterval) { // Update current display only if simulation is not running
                 currentGrowthRateSpan.textContent = r.toFixed(2);
             }
+            // Redraw return map as its reference parabola depends on 'r'
+            if (!simulationInterval) { // Only redraw if not actively simulating
+                drawReturnMap();
+            }
             console.log(`Growth rate slider adjusted: ${r}`);
         });
 
@@ -684,6 +713,21 @@
             randomnessFrequency = parseFloat(randomnessFrequencySlider.value);
             console.log(`Randomness frequency slider adjusted: ${randomnessFrequency}`);
         });
+
+        // New Moving Average Event Listeners
+        movingAverageEnabledCheckbox.addEventListener('change', () => {
+            movingAverageEnabled = movingAverageEnabledCheckbox.checked;
+            drawChart(); // Redraw chart to show/hide moving average
+            console.log(`Moving Average Enabled: ${movingAverageEnabled}`);
+        });
+
+        movingAverageWindowSlider.addEventListener('input', () => {
+            movingAverageWindow = parseInt(movingAverageWindowSlider.value);
+            movingAverageWindowValueSpan.textContent = movingAverageWindowSlider.value;
+            drawChart(); // Redraw chart to update moving average line
+            console.log(`Moving Average Window: ${movingAverageWindow}`);
+        });
+
 
         // --- Event Listeners for Buttons ---
         startButton.addEventListener('click', () => {
@@ -751,7 +795,7 @@
                 }
 
                 updateDisplay(appliedRandomEvent); // Update UI elements with current values
-                drawChart(); // Redraw the population chart
+                drawChart(); // Redraw the population chart (which now includes moving average)
                 drawReturnMap(currentXForReturnMap, x); // Draw the new point on the return map
 
                 // Check for extinction and stop simulation if population hits zero or very close to zero
@@ -893,6 +937,33 @@
                 const currentPlotY = chartHeight - (currentPop * chartHeight);
                 populationChartCtx.arc(currentPlotX, currentPlotY, 4, 0, Math.PI * 2); // Draw a circle
                 populationChartCtx.fill();
+            }
+
+            // Draw Moving Average Line if enabled and enough data points exist
+            if (movingAverageEnabled && populationHistory.length >= movingAverageWindow) {
+                populationChartCtx.beginPath();
+                populationChartCtx.strokeStyle = '#000000'; // Black for moving average
+                populationChartCtx.lineWidth = 2;
+                populationChartCtx.setLineDash([5, 5]); // Dashed line
+
+                for (let i = movingAverageWindow - 1; i < populationHistory.length; i++) {
+                    let sum = 0;
+                    for (let j = 0; j < movingAverageWindow; j++) {
+                        sum += populationHistory[i - j];
+                    }
+                    const average = sum / movingAverageWindow;
+
+                    const plotX = padding + (i * stepX);
+                    const plotY = chartHeight - (average * chartHeight);
+
+                    if (i === movingAverageWindow - 1) {
+                        populationChartCtx.moveTo(plotX, plotY);
+                    } else {
+                        populationChartCtx.lineTo(plotX, plotY);
+                    }
+                }
+                populationChartCtx.stroke();
+                populationChartCtx.setLineDash([]); // Reset line dash
             }
         }
 
@@ -1124,21 +1195,21 @@
 
 
             if (r < 3.0) {
-                r_behavior_description = "The population will likely stabilize at a single, predictable point.";
-                chaos_explanation_specific = "At this 'r' value, the simulation is not in a chaotic regime. The population's behavior is stable and predictable, meaning small differences in starting conditions will not lead to drastically different long-term outcomes. The effects of randomness will be observed as minor, temporary fluctuations around this stable point.";
-                return_map_explanation = "On the Return Map (Phase Space Plot), you will observe points converging rapidly to a single point where the parabola intersects the $y=x$ diagonal line, indicating a stable equilibrium. Randomness may cause slight scatter around this point.";
+                r_behavior_description = "The goldfish population will likely stabilize at a single, predictable size within the pond's carrying capacity.";
+                chaos_explanation_specific = "At this 'r' value, the simulation is not in a chaotic regime. The population's behavior is stable and predictable, meaning small differences in starting conditions will not lead to drastically different long-term outcomes. The effects of randomness will be observed as minor, temporary fluctuations around this stable point, but the system will always tend to return to its equilibrium.";
+                return_map_explanation = "On the Return Map (Phase Space Plot), you will observe points converging rapidly to a single point where the parabola intersects the $y=x$ diagonal line, indicating a stable equilibrium. Randomness may cause slight scatter around this point, but the underlying attraction to this single equilibrium remains clear. This visual perfectly demonstrates the deterministic stability of the system.";
             } else if (r >= 3.0 && r < 3.449) {
-                r_behavior_description = "The population will oscillate between two or more fixed values in a predictable cycle (period doubling).";
-                chaos_explanation_specific = "The simulation exhibits oscillatory behavior, often seen as period-doubling bifurcations before true chaos. While the population fluctuates, it follows a predictable pattern of values. Sensitive dependence is minimal; randomness primarily introduces noise around these predictable cycles.";
-                return_map_explanation = "On the Return Map, points will jump back and forth between 2 or more distinct points on the parabola, forming a recognizable cycle. This demonstrates deterministic oscillation. Randomness will appear as slight deviations from these exact cycle points.";
+                r_behavior_description = "The goldfish population will oscillate predictably between two or more fixed sizes in a regular cycle (period doubling).";
+                chaos_explanation_specific = "The simulation exhibits oscillatory behavior, often seen as period-doubling bifurcations before true chaos. While the population fluctuates, it follows a predictable pattern of values, repeatedly cycling through the same set of sizes. Sensitive dependence is minimal at this stage; randomness primarily introduces noise around these predictable cycles, making the oscillations slightly imperfect.";
+                return_map_explanation = "On the Return Map, points will jump back and forth between 2 or more distinct points on the parabola, forming a recognizable cycle (e.g., a two-point or four-point attractor). This clearly demonstrates deterministic oscillation. Randomness will appear as slight deviations, causing the plotted points to form small clouds around these exact cycle points rather than being perfectly on them, showing how external factors perturb the underlying cycle.";
             } else if (r >= 3.449 && r < 3.569) {
-                r_behavior_description = "The population will exhibit more complex, multi-period oscillations, on the edge of chaos.";
-                chaos_explanation_specific = "This 'r' value places the simulation in a highly sensitive region, close to the onset of chaos. The population's behavior is complex, showing multiple oscillating periods, and is highly susceptible to the 'butterfly effect.' Even tiny variations, including those from our introduced randomness, can push the system into wildly different, unpredictable paths over time.";
-                return_map_explanation = "The Return Map will show points jumping between multiple, more numerous points on the parabola, illustrating the period-doubling cascade. The pattern is still discernible but much more intricate, foreshadowing chaos. Randomness makes these complex patterns less 'clean' and more diffused.";
+                r_behavior_description = "The goldfish population will exhibit more complex, multi-period oscillations, on the very edge of chaos.";
+                chaos_explanation_specific = "This 'r' value places the simulation in a highly sensitive region, very close to the onset of true chaos. The population's behavior becomes complex, showing multiple oscillating periods (further period-doubling cascade), and is highly susceptible to the 'butterfly effect.' Even tiny, unmeasurable variations, including those from our introduced randomness, can push the system into wildly different, unpredictable paths over time, making long-term prediction increasingly difficult.";
+                return_map_explanation = "The Return Map will show points jumping between multiple, more numerous fixed points on the parabola, illustrating the period-doubling cascade in action. The pattern is still discernible but much more intricate, hinting at the upcoming chaos. Randomness makes these complex deterministic patterns less 'clean' and more diffused, reflecting the increasing sensitivity before full chaos takes over.";
             } else { // r >= 3.569
-                r_behavior_description = "The population is in a truly chaotic regime, making long-term prediction practically impossible despite deterministic rules.";
-                chaos_explanation_specific = "In this chaotic state, the simulation demonstrates **extreme sensitive dependence on initial conditions, known as the 'butterfly effect.'** Even if we could precisely know every parameter, a minute, unmeasurable difference (like the smallest fraction of a fish or a microscopic environmental change) would lead to entirely divergent population trajectories. The 'randomness factor' further amplifies this unpredictability, ensuring the observed behavior never precisely repeats and appears genuinely random, even though it's governed by the simple logistic equation.";
-                return_map_explanation = "Despite the seemingly random behavior in the time series, the Return Map will clearly show that *all* generated points still fall precisely on the parabolic curve of the logistic map. This highlights the deterministic nature of chaos. However, instead of clustering into fixed points or cycles, the points will fill a continuous segment of the parabola, demonstrating the system's unbounded yet structured unpredictability. Randomness will cause these points to scatter slightly *off* the perfect parabolic line, showing external noise impacting the deterministic system. The spread of points across the parabola, rather than converging to a single point or simple cycle, is a visual signature of the chaotic 'attractor.'";
+                r_behavior_description = "The goldfish population is in a truly chaotic regime, making long-term prediction practically impossible despite deterministic rules.";
+                chaos_explanation_specific = "In this chaotic state, the simulation demonstrates **extreme sensitive dependence on initial conditions, known as the 'butterfly effect.'** This means even if we could precisely know every parameter, a minute, unmeasurable difference (like the smallest fraction of a fish or a microscopic environmental change in the pond) would lead to entirely divergent population trajectories over time. The 'randomness factor' further amplifies this inherent unpredictability, ensuring the observed population behavior never precisely repeats and appears genuinely random in its time series, even though it's fundamentally governed by the simple logistic equation.";
+                return_map_explanation = "Despite the seemingly random behavior in the time series chart, the Return Map remains a powerful tool. It will clearly show that *all* generated points still fall precisely on the parabolic curve of the logistic map. This emphatically highlights the deterministic nature of chaos; the system follows an exact rule. However, instead of clustering into fixed points or simple cycles, the points will fill a continuous segment of the parabola, demonstrating the system's unbounded yet structured unpredictability. Randomness will cause these points to scatter slightly *off* the perfect parabolic line, visually indicating how external noise perturbs the underlying deterministic chaotic system. The dense, irregular spread of points across the parabola, rather than converging, is a visual signature of the chaotic 'attractor.'";
             }
 
             let x_trend_description = "";
@@ -1146,20 +1217,20 @@
             if (generation > 1 && populationHistory.length > 1) {
                 const prevX = populationHistory[populationHistory.length - 2];
                 if (lastX > prevX) {
-                    x_trend_description = "The population is currently growing.";
+                    x_trend_description = "The goldfish population is currently growing, moving towards a higher number of fish.";
                 } else if (lastX < prevX) {
-                    x_trend_description = "The population is currently declining.";
+                    x_trend_description = "The goldfish population is currently declining, with fewer fish expected in the next step.";
                 } else {
-                    x_trend_description = "The population is currently stable.";
+                    x_trend_description = "The goldfish population is currently stable, showing little change from the previous step.";
                 }
             } else {
-                x_trend_description = "The simulation has just started or reset.";
+                x_trend_description = "The simulation has just started or reset, and the initial trend is being established.";
             }
 
-            const randomness_effect = `The 'Randomness Factor' (currently ${randomnessFactor.toFixed(3)}) and 'Randomness Frequency' (currently ${randomnessFrequency.toFixed(2)}) introduce external, unpredictable disturbances that mimic real-world events, like sudden environmental shifts or diseases. This randomness further influences the population's path, especially in chaotic regimes where small perturbations have amplified effects.`;
+            const randomness_effect = `The 'Randomness Factor' (currently ${randomnessFactor.toFixed(3)}) and 'Randomness Frequency' (currently ${randomnessFrequency.toFixed(2)}) introduce external, unpredictable disturbances to the pond environment. These mimic real-world events, like sudden environmental shifts (e.g., a cold snap, a burst of algae growth) or individual biological events (e.g., a few fish falling sick, an unrecorded predator visit). This randomness further influences the population's path, especially in chaotic regimes where small perturbations have amplified effects, making the system even harder to predict precisely.`;
 
             // Explanation of fish population
-            const fish_population_explanation = `In this model, the 'population (x)' is a normalized value between 0 and 1. '0' represents extinction (no fish), while '1' represents the maximum carrying capacity of the pond (the largest population the environment can sustain). This simplification allows us to observe the proportional changes in population relative to its limit, rather than tracking exact large numbers of individual fish.`;
+            const fish_population_explanation = `In this simulation, the 'population (x)' represents the goldfish population as a normalized value between 0 and 1. '0' signifies extinction (no fish in the pond), while '1' represents the maximum carrying capacity of the pond (the largest population the environment can sustainably support, given resources). This normalization allows us to focus on the proportional changes and dynamics of the population relative to its environmental limits, simplifying the complexity of tracking exact large numbers of individual fish while still illustrating fundamental ecological principles.`;
 
 
             const insightPrompt = `This simulation models goldfish population dynamics using the logistic map (P_next = r * P * (1 - P)) and incorporates random perturbations. It visually demonstrates the **Butterfly Effect** and the principles of chaos theory.
@@ -1167,11 +1238,11 @@
             - **Understanding the Goldfish Population (x):** ${fish_population_explanation}
             - **Population Behavior (based on r=${r.toFixed(2)}):** ${r_behavior_description}
             - **Current Trend:** ${x_trend_description}
-            - **Chaos Theory & The Butterfly Effect:** This simulation exemplifies how even simple, deterministic rules can lead to profound long-term unpredictability. For 'r' values in the chaotic range, a minute, unmeasurable difference in the initial goldfish population, or a tiny random event (like a single fish more or less), will cause the population trajectory to diverge wildly and unpredictably over time. This is the core of the 'butterfly effect' – small causes lead to large, unforeseen differences.
-            - **Visualizing Chaos with the Return Map:** The Phase Space Plot (Return Map) is key to understanding this. It plots $x_n$ vs $x_{n+1}$ and reveals the underlying deterministic rule as all points fall on the parabolic curve. However, in chaotic regimes, instead of converging to fixed points or simple cycles, the points fill a continuous segment of the parabola, demonstrating the system's unbounded yet structured unpredictability. Randomness is shown by points scattering slightly *off* this perfect curve, indicating external noise.
+            - **Chaos Theory & The Butterfly Effect in the Pond:** This simulation vividly exemplifies how even simple, deterministic rules can lead to profound long-term unpredictability in the goldfish population. For 'r' values in the chaotic range, a minute, unmeasurable difference in the initial goldfish population, or a tiny random event (like a single extra mosquito larva for food or an unexpected mild day), will cause the entire population trajectory to diverge wildly and unpredictably over time. This is the core of the 'butterfly effect' – where small, seemingly insignificant causes lead to large, unforeseen differences in the pond's fish numbers. The system is inherently deterministic, following the logistic map, yet its long-term state is practically unknowable.
+            - **Visualizing Chaos with the Return Map:** The Phase Space Plot (Return Map) is a crucial tool for understanding this. It plots the current population ($x_n$) against the next ($x_{n+1}$). It always shows points on the parabolic curve derived from the logistic map, confirming the deterministic rule. However, in chaotic regimes, instead of settling into fixed points or simple cycles, the points densely fill a section of the parabola, showcasing the 'strange attractor' and the system's bounded yet unpredictable nature. Randomness causes points to scatter slightly *off* this perfect curve, representing external disturbances.
             - **Impact of Randomness:** ${randomness_effect}
 
-            Provide a comprehensive, concise analysis explaining how these elements interact to produce the observed simulation results, focusing on the manifestation of the butterfly effect and the role of both chaos and randomness in the goldfish population. Keep the explanation to about 8-12 sentences.`;
+            Provide a comprehensive, concise analysis explaining how these elements interact to produce the observed simulation results, focusing on the manifestation of the butterfly effect and the role of both chaos and randomness in the goldfish population. Keep the explanation to about 10-15 sentences.`;
 
 
             callGeminiAPI(insightPrompt, "Population Model & Results Insight:");
