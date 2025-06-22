@@ -422,6 +422,13 @@
             <button id="generateBifurcationButton">Generate Bifurcation Diagram 📈</button>
         </div>
 
+        <!-- New section for the Bifurcation Diagram Chart (Moved to be immediately below buttons) -->
+        <div class="bifurcation-map-container">
+            <h2>Bifurcation Diagram (Attractors vs. Growth Rate 'r')</h2>
+            <p class="description">This diagram is like a roadmap for the goldfish population's long-term future, revealing its behavior as you change the "growth rate" (the 'r' value). It plots the population's eventual settled values (attractors) for each 'r'. You'll see it transition from a single stable line, to splitting lines (oscillations), and then to dense, filled regions as chaos emerges. It's a visual journey showing how the system shifts from predictable to unpredictable patterns.</p>
+            <canvas id="bifurcationMapCanvas" width="800" height="400"></canvas>
+        </div>
+
         <div class="simulation-area">
             <!-- Canvas for the population chart -->
             <div class="chart-container">
@@ -451,13 +458,6 @@
             <h2>Phase Space Plot (Return Map: $x_n$ vs $x_{n+1}$)</h2>
             <p class="description">This chart plots the current population ($x_n$) against the population in the next step ($x_{n+1}$). It reveals the underlying deterministic rule of the logistic map, showing how points always fall on the parabola, even when the time series is chaotic. Randomness is visualized as points deviating from this perfect curve.</p>
             <canvas id="returnMapCanvas" width="800" height="400"></canvas>
-        </div>
-
-        <!-- New section for the Bifurcation Diagram Chart -->
-        <div class="bifurcation-map-container">
-            <h2>Bifurcation Diagram (Attractors vs. Growth Rate 'r')</h2>
-            <p class="description">This diagram is like a roadmap for the goldfish population's long-term future, revealing its behavior as you change the "growth rate" (the 'r' value). It plots the population's eventual settled values (attractors) for each 'r'. You'll see it transition from a single stable line, to splitting lines (oscillations), and then to dense, filled regions as chaos emerges. It's a visual journey showing how the system shifts from predictable to unpredictable patterns.</p>
-            <canvas id="bifurcationMapCanvas" width="800" height="400"></canvas>
         </div>
 
         <!-- Area to display LLM output - MOVED HERE and simplified for single output -->
@@ -1236,7 +1236,7 @@
 
             const chatHistory = [{ role: "user", parts: [{ text: prompt }] }];
             const payload = { contents: chatHistory };
-            const apiKey = "AIzaSyBe4FaOSzP9GaqTpcvW8lV-wKRu9nH82sA"; // Canvas will provide this API key at runtime
+            const apiKey = ""; // Canvas will provide this API key at runtime
 
             const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
 
@@ -1485,7 +1485,7 @@
                 }
 
                 drawChart(); // Redraw charts on resize
-                initializePond(); // Re-initialize pond to redistribute fish correctly on resize
+                initializePond(); // Re-initialize pond to distribute fish correctly on resize
                 drawReturnMap(); // Redraw return map (clears old points and draws axes/parabola)
             });
         };
