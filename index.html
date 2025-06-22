@@ -4,61 +4,1055 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Goldfish Pond Population Dynamics</title>
-    <link rel="stylesheet" href="style.css">
+    <!-- Embedded CSS for styling the page -->
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            min-height: 100vh;
+            background-color: #e0f2f7;
+            color: #333;
+            margin: 20px;
+        }
+
+        .container {
+            background-color: #ffffff;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+            max-width: 1000px;
+            width: 100%;
+            text-align: center;
+        }
+
+        h1 {
+            color: #007bff;
+            margin-bottom: 15px;
+            font-size: 2.2em;
+        }
+
+        p {
+            font-size: 1.1em;
+            line-height: 1.6;
+            margin-bottom: 20px;
+        }
+
+        .controls {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 25px;
+            margin-bottom: 30px;
+            background-color: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.05);
+        }
+
+        .control-group {
+            text-align: left;
+        }
+
+        .control-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+            color: #555;
+        }
+
+        .control-group input[type="range"] {
+            width: 100%;
+            -webkit-appearance: none;
+            height: 8px;
+            border-radius: 5px;
+            background: #d3d3d3;
+            outline: none;
+            opacity: 0.7;
+            -webkit-transition: .2s;
+            transition: opacity .2s;
+        }
+
+        .control-group input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #007bff;
+            cursor: pointer;
+            border: 2px solid #fff;
+        }
+
+        .control-group input[type="range"]::-moz-range-thumb {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #007bff;
+            cursor: pointer;
+            border: 2px solid #fff;
+        }
+
+        .control-group span {
+            font-weight: bold;
+            color: #007bff;
+            margin-left: 10px;
+        }
+
+        .control-group .description {
+            font-size: 0.9em;
+            color: #666;
+            margin-top: 5px;
+            margin-bottom: 0;
+        }
+
+        button {
+            background-color: #28a745;
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1.1em;
+            margin: 0 10px;
+            transition: background-color 0.3s ease, transform 0.2s ease;
+        }
+
+        button:hover:not(:disabled) {
+            background-color: #218838;
+            transform: translateY(-2px);
+        }
+
+        button:active:not(:disabled) {
+            transform: translateY(0);
+        }
+
+        button#stopButton {
+            background-color: #dc3545;
+        }
+
+        button#stopButton:hover:not(:disabled) {
+            background-color: #c82333;
+        }
+
+        button#resetButton {
+            background-color: #ffc107;
+            color: #333;
+        }
+
+        button#resetButton:hover:not(:disabled) {
+            background-color: #e0a800;
+        }
+
+        button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+            opacity: 0.8;
+        }
+
+        /* New button styles for LLM features */
+        button#getInsightButton { /* Only one LLM button now */
+            background-color: #6f42c1; /* Purple color */
+            color: white;
+        }
+        button#getInsightButton:hover:not(:disabled) {
+            background-color: #563391;
+        }
+
+
+        .simulation-area {
+            display: flex;
+            flex-wrap: wrap; /* Allows wrapping on smaller screens */
+            gap: 30px;
+            justify-content: center;
+            margin-top: 30px;
+            margin-bottom: 30px; /* Added space before LLM output */
+        }
+
+        .chart-container {
+            flex: 2; /* Takes more space */
+            min-width: 400px; /* Minimum width for the chart */
+            background-color: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
+        }
+
+        .current-values {
+            flex: 1; /* Takes remaining space */
+            min-width: 250px; /* Minimum width for values */
+            background-color: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
+            text-align: left;
+        }
+
+        h2 {
+            color: #0056b3;
+            margin-bottom: 15px;
+            font-size: 1.8em;
+        }
+
+        canvas {
+            border: 1px solid #ccc;
+            background-color: #fff;
+            display: block;
+            margin: 0 auto;
+            width: 100%; /* Make canvas responsive within its container */
+            height: auto; /* Maintain aspect ratio */
+        }
+
+        .current-values p {
+            margin-bottom: 10px;
+            font-size: 1.1em;
+            color: #444;
+        }
+
+        .current-values strong {
+            color: #007bff;
+        }
+
+        .current-values .note {
+            font-size: 0.9em;
+            color: #777;
+            margin-top: 20px;
+        }
+
+        /* Styles for the custom message box */
+        #messageBox {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: #fff;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+            z-index: 1000;
+            text-align: center;
+            max-width: 400px;
+            width: 90%;
+            animation: fadeIn 0.3s ease-out;
+            display: none; /* Hidden by default */
+        }
+
+        #messageBoxOverlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 999;
+            animation: fadeIn 0.3s ease-out;
+            display: none; /* Hidden by default */
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translate(-50%, -60%); }
+            to { opacity: 1; transform: translate(-50%, -50%); }
+        }
+        @keyframes fadeOut {
+            from { opacity: 1; transform: translate(-50%, -50%); }
+            to { opacity: 0; transform: translate(-50%, -60%); }
+        }
+
+        /* New styles for the pond animation area */
+        .pond-container {
+            flex: 2; /* Takes more space, similar to chart */
+            min-width: 400px;
+            background-color: #d0f0f8; /* Light blue for water */
+            border: 5px solid #007bff; /* Pond border */
+            border-radius: 50%; /* Make it circular/oval */
+            overflow: hidden; /* Keep fish inside */
+            position: relative;
+            aspect-ratio: 16 / 9; /* Maintain aspect ratio for pond */
+            margin-bottom: 30px; /* Space below pond */
+            box-shadow: inset 0 0 15px rgba(0, 123, 255, 0.5), 0 8px 16px rgba(0, 0, 0, 0.1);
+        }
+
+        #pondCanvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: transparent; /* Pond background is from .pond-container */
+        }
+
+        /* Styles for LLM Output Area */
+        #llmOutputArea {
+            margin-top: 20px;
+            padding: 20px;
+            border: 1px solid #c3b1e6; /* Consistent border with LLM elements */
+            border-radius: 8px;
+            background-color: #e6e6fa; /* Light purple background */
+            text-align: left;
+            display: none; /* Hidden by default */
+            max-width: 800px;
+            margin-left: auto;
+            margin-right: auto;
+            word-wrap: break-word; /* Ensure long words wraps */
+        }
+        #llmOutputArea h3 {
+            color: #563391;
+            margin-top: 0;
+            margin-bottom: 15px;
+            font-size: 1.5em;
+            text-align: center;
+        }
+        #llmOutputText {
+            font-size: 1.1em;
+            line-height: 1.6;
+            margin-bottom: 0;
+            white-space: pre-wrap; /* Preserves whitespace and wraps text */
+        }
+        .loading-spinner {
+            border: 4px solid #f3f3f3; /* Light grey */
+            border-top: 4px solid #6f42c1; /* Purple */
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            animation: spin 1s linear infinite;
+            display: inline-block;
+            vertical-align: middle;
+            margin-left: 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+
+        @media (max-width: 768px) {
+            .controls {
+                grid-template-columns: 1fr; /* Stack controls on small screens */
+            }
+            .simulation-area {
+                flex-direction: column; /* Stack chart and values */
+            }
+            .chart-container, .current-values, .pond-container { /* Include pond in stacking */
+                min-width: unset; /* Remove min-width to allow full flexibility */
+                width: 100%;
+                border-radius: 8px; /* Square off pond on mobile for better fit */
+                aspect-ratio: unset; /* Let height adjust for mobile */
+                height: 300px; /* Fixed height for pond on mobile */
+            }
+            button {
+                margin: 10px 5px; /* Adjust button spacing */
+            }
+        }
+    </style>
 </head>
 <body>
     <div class="container">
         <h1>Goldfish Pond Population Dynamics</h1>
-        <p>This simulation illustrates how seemingly simple rules can lead to complex (chaotic) and sometimes random behavior in a goldfish pond population.</p>
+        <p>This simulation explores the fascinating interplay of **randomness** and **chaos theory** within a goldfish pond population. While randomness introduces unpredictable external disturbances (like sudden environmental changes or individual events), chaos theory reveals how a seemingly simple, deterministic population growth rule (the logistic map) can lead to profoundly unpredictable, yet structured, long-term behavior. Even a tiny, unmeasurable difference in the initial number of fish or growth rate can lead to dramatically different population outcomes over time, illustrating the "butterfly effect" inherent in chaotic systems. Adjust the parameters to observe how the pond's population shifts between stable, oscillating, and truly chaotic states.</p>
 
         <div class="controls">
+            <!-- Control group for Growth Rate (r) -->
             <div class="control-group">
                 <label for="growthRate">Growth Rate (r):</label>
                 <input type="range" id="growthRate" min="0.1" max="4.0" step="0.01" value="3.5">
                 <span id="growthRateValue">3.5</span>
-                <p class="description">Higher values of 'r' push the system towards chaotic behavior. (0-4)</p>
+                <p class="description">Higher values of 'r' (especially above ~3.57) push the system towards chaotic behavior, where small changes have unpredictable long-term effects. (Range: 0.1 - 4.0)</p>
             </div>
+            <!-- Control group for Initial Population (x0) -->
             <div class="control-group">
                 <label for="initialPopulation">Initial Population (x0):</label>
                 <input type="range" id="initialPopulation" min="0.01" max="0.99" step="0.01" value="0.5">
                 <span id="initialPopulationValue">0.5</span>
-                <p class="description">Normalized population (0 to 1). Small changes here can have big effects in chaotic regimes.</p>
+                <p class="description">The starting normalized population (0 to 1). In chaotic regimes, even tiny differences here can lead to vastly different outcomes over time. (Range: 0.01 - 0.99)</p>
             </div>
+            <!-- Control group for Randomness Factor -->
             <div class="control-group">
                 <label for="randomnessFactor">Randomness Factor:</label>
                 <input type="range" id="randomnessFactor" min="0.0" max="0.1" step="0.001" value="0.01">
                 <span id="randomnessFactorValue">0.01</span>
-                <p class="description">Magnitude of random environmental events (e.g., unexpected deaths/births).</p>
+                <p class="description">The maximum magnitude of random environmental perturbations (e.g., unexpected deaths or births) applied at each step. (Range: 0.0 - 0.1)</p>
             </div>
+            <!-- Control group for Randomness Frequency -->
             <div class="control-group">
                 <label for="randomnessFrequency">Randomness Frequency:</label>
                 <input type="range" id="randomnessFrequency" min="0.0" max="1.0" step="0.01" value="0.1">
                 <span id="randomnessFrequencyValue">0.1</span>
-                <p class="description">Probability of a random event occurring each step (0-1).</p>
+                <p class="description">The probability (0 to 1) that a random event occurs during each simulation step. (Range: 0.0 - 1.0)</p>
             </div>
 
+            <!-- Action buttons for the simulation -->
             <button id="startButton">Start Simulation</button>
             <button id="stopButton" disabled>Stop Simulation</button>
             <button id="resetButton">Reset Simulation</button>
+            <button id="getInsightButton">Get Population Insight ✨</button> <!-- LLM Button (Scenario button removed) -->
         </div>
 
         <div class="simulation-area">
+            <!-- Canvas for the population chart -->
             <div class="chart-container">
                 <h2>Population Over Time (Normalized)</h2>
                 <canvas id="populationChart" width="800" height="400"></canvas>
             </div>
 
+            <!-- Pond Animation Area -->
+            <div class="pond-container">
+                <h2>Pond Animation</h2>
+                <canvas id="pondCanvas"></canvas>
+            </div>
+
+            <!-- Display current simulation values -->
             <div class="current-values">
                 <h2>Current State</h2>
                 <p><strong>Generation:</strong> <span id="currentGeneration">0</span></p>
                 <p><strong>Current Population (x):</strong> <span id="currentPopulationX">0.5000</span></p>
                 <p><strong>Applied Growth Rate (r):</strong> <span id="currentGrowthRate">3.50</span></p>
                 <p><strong>Random Event Applied:</strong> <span id="randomEventApplied">No</span></p>
-                <p class="note">Note: Population is normalized from 0 (extinction) to 1 (carrying capacity).</p>
+                <p class="note">Note: Population is normalized from 0 (extinction) to 1 (carrying capacity of the pond). This simplified model represents a fraction of the maximum possible population.</p>
             </div>
+        </div>
+
+        <!-- Area to display LLM output - MOVED HERE and simplified for single output -->
+        <div id="llmOutputArea">
+            <h3>AI-Generated Insight:</h3>
+            <p id="llmOutputText">Click the "Get Population Insight ✨" button to get an AI-powered analysis of your goldfish pond!</p>
         </div>
     </div>
 
-    <script src="script.js"></script>
+    <!-- Embedded JavaScript for simulation logic and interactions -->
+    <script>
+        // DOM Elements - Get references to all necessary HTML elements
+        const growthRateSlider = document.getElementById('growthRate');
+        const growthRateValueSpan = document.getElementById('growthRateValue');
+        const initialPopulationSlider = document.getElementById('initialPopulation');
+        const initialPopulationValueSpan = document.getElementById('initialPopulationValue');
+        const randomnessFactorSlider = document.getElementById('randomnessFactor');
+        const randomnessFactorValueSpan = document.getElementById('randomnessFactorValue');
+        const randomnessFrequencySlider = document.getElementById('randomnessFrequency');
+        const randomnessFrequencyValueSpan = document.getElementById('randomnessFrequencyValue');
+
+        const startButton = document.getElementById('startButton');
+        const stopButton = document.getElementById('stopButton');
+        const resetButton = document.getElementById('resetButton');
+
+        const getInsightButton = document.getElementById('getInsightButton');
+        // Removed getScenarioButton as per new requirements
+        const llmOutputArea = document.getElementById('llmOutputArea');
+        const llmOutputTitle = llmOutputArea.querySelector('h3'); // Reference the h3 for dynamic title
+        const llmOutputText = document.getElementById('llmOutputText');
+
+
+        const currentGenerationSpan = document.getElementById('currentGeneration');
+        const currentPopulationXSpan = document.getElementById('currentPopulationX');
+        const currentGrowthRateSpan = document.getElementById('currentGrowthRate');
+        const randomEventAppliedSpan = document.getElementById('randomEventApplied');
+
+        // Canvas for population chart
+        const populationChartCanvas = document.getElementById('populationChart');
+        const populationChartCtx = populationChartCanvas ? populationChartCanvas.getContext('2d') : null;
+        if (!populationChartCanvas) {
+            console.error("Error: Population Chart Canvas element not found!");
+        }
+        if (!populationChartCtx) {
+            console.error("Error: 2D context could not be obtained from population chart canvas!");
+        }
+
+        // Canvas for pond animation
+        const pondCanvas = document.getElementById('pondCanvas');
+        const pondCtx = pondCanvas ? pondCanvas.getContext('2d') : null;
+        if (!pondCanvas) {
+            console.error("Error: Pond Canvas element not found!");
+        }
+        if (!pondCtx) {
+            console.error("Error: 2D context could not be obtained from pond canvas!");
+        }
+
+
+        // Simulation Variables
+        let r; // Growth rate for the logistic map
+        let x; // Current normalized population (value between 0 and 1)
+        let randomnessFactor; // Magnitude of random perturbation to the population
+        let randomnessFrequency; // Probability (0-1) of a random event occurring each step
+        let generation = 0; // Current simulation generation/step
+        let simulationInterval = null; // Stores the ID of the setInterval timer for stopping it
+        let pondAnimationFrameId = null; // Stores the requestAnimationFrame ID for pond animation
+
+        const populationHistory = []; // Array to store historical population values for charting
+        const maxDataPoints = 200; // Maximum number of data points to display on the graph
+
+        // Pond Animation Variables
+        const maxPondFish = 150; // Maximum number of fish to display in the pond
+        let pondFish = []; // Array to store individual fish objects {x, y, dx, dy, color, size}
+
+        // --- Initialization Function ---
+        // Sets up the initial state of the simulation based on slider values
+        function initializeSimulation() {
+            console.log("initializeSimulation called: Setting up initial parameters.");
+            r = parseFloat(growthRateSlider.value);
+            x = parseFloat(initialPopulationSlider.value);
+            randomnessFactor = parseFloat(randomnessFactorSlider.value);
+            randomnessFrequency = parseFloat(randomnessFrequencySlider.value);
+
+            generation = 0; // Reset generation count
+            populationHistory.length = 0; // Clear any previous population data
+            populationHistory.push(x); // Add the initial population to history
+
+            initializePond(); // Set up initial fish in the pond
+
+            updateDisplay(); // Update the displayed current values
+            drawChart(); // Draw the initial state on the population chart
+            console.log(`Initial state set: r=${r.toFixed(2)}, x=${x.toFixed(4)}, ` +
+                        `randomnessFactor=${randomnessFactor.toFixed(3)}, randomnessFrequency=${randomnessFrequency.toFixed(2)}`);
+
+            // Ensure pond canvas is sized correctly and start its animation
+            if (pondCanvas) {
+                const container = pondCanvas.parentElement;
+                pondCanvas.width = container.clientWidth;
+                pondCanvas.height = container.clientHeight;
+                // Stop any previous animation frame before starting a new one
+                if (pondAnimationFrameId) {
+                    cancelAnimationFrame(pondAnimationFrameId);
+                }
+                animatePond(); // Start the pond animation loop
+            }
+             // Reset LLM output area on initialization
+            llmOutputArea.style.display = 'block'; // Ensure it's visible with initial message
+            llmOutputTitle.textContent = "AI-Generated Insight:";
+            llmOutputText.innerHTML = "Click the \"Get Population Insight ✨\" button to get an AI-powered analysis of your goldfish pond!";
+        }
+
+        // --- Pond Initialization ---
+        function initializePond() {
+            pondFish = []; // Clear existing fish
+            const currentFishCount = Math.floor(x * maxPondFish);
+            if (pondCanvas && pondCanvas.width > 0 && pondCanvas.height > 0) { // Check if canvas dimensions are valid
+                for (let i = 0; i < currentFishCount; i++) {
+                    // Random initial position within pond bounds
+                    const size = 3 + Math.random() * 4; // Fish size between 3 and 7
+                    pondFish.push({
+                        x: Math.random() * pondCanvas.width,
+                        y: Math.random() * pondCanvas.height,
+                        dx: (Math.random() - 0.5) * 1, // Small random horizontal movement
+                        dy: (Math.random() - 0.5) * 1, // Small random vertical movement
+                        color: `hsl(${Math.random() * 30 + 20}, 80%, 60%)`, // Shades of orange/gold
+                        size: size
+                    });
+                }
+            }
+            console.log(`Pond initialized with ${pondFish.length} fish.`);
+        }
+
+        // --- Pond Animation Logic ---
+        function animatePond() {
+            if (!pondCtx || pondCanvas.width === 0 || pondCanvas.height === 0) {
+                 pondAnimationFrameId = requestAnimationFrame(animatePond); // Keep trying if dimensions are zero
+                 return;
+            }
+
+            // Update fish count based on current population
+            const desiredFishCount = Math.floor(x * maxPondFish);
+            // Add or remove fish to match the desired count
+            while (pondFish.length < desiredFishCount) {
+                const size = 3 + Math.random() * 4;
+                pondFish.push({
+                    x: Math.random() * pondCanvas.width,
+                    y: Math.random() * pondCanvas.height,
+                    dx: (Math.random() - 0.5) * 1,
+                    dy: (Math.random() - 0.5) * 1,
+                    color: `hsl(${Math.random() * 30 + 20}, 80%, 60%)`,
+                    size: size
+                });
+            }
+            while (pondFish.length > desiredFishCount) {
+                pondFish.pop();
+            }
+
+            // Clear pond for redrawing
+            pondCtx.clearRect(0, 0, pondCanvas.width, pondCanvas.height);
+
+            // Move and draw each fish
+            pondFish.forEach(fish => {
+                // Update position
+                fish.x += fish.dx;
+                fish.y += fish.dy;
+
+                // Bounce off walls (with a slight buffer to prevent getting stuck on edge)
+                const buffer = fish.size;
+                if (fish.x < buffer || fish.x > pondCanvas.width - buffer) fish.dx *= -1;
+                if (fish.y < buffer || fish.y > pondCanvas.height - buffer) fish.dy *= -1;
+
+                // Slightly randomize direction for organic movement
+                fish.dx += (Math.random() - 0.5) * 0.1;
+                fish.dy += (Math.random() - 0.5) * 0.1;
+                fish.dx = Math.max(-1, Math.min(1, fish.dx)); // Cap speed
+                fish.dy = Math.max(-1, Math.min(1, fish.dy)); // Cap speed
+
+
+                // Draw fish (simple circle)
+                pondCtx.beginPath();
+                pondCtx.arc(fish.x, fish.y, fish.size, 0, Math.PI * 2);
+                pondCtx.fillStyle = fish.color;
+                pondCtx.fill();
+                pondCtx.strokeStyle = 'rgba(0,0,0,0.2)';
+                pondCtx.lineWidth = 1;
+                pondCtx.stroke();
+            });
+
+            // Request next animation frame
+            pondAnimationFrameId = requestAnimationFrame(animatePond);
+        }
+
+
+        // --- Event Listeners for Sliders ---
+        // Update corresponding variables and display spans when sliders are adjusted
+        growthRateSlider.addEventListener('input', () => {
+            growthRateValueSpan.textContent = growthRateSlider.value;
+            r = parseFloat(growthRateSlider.value);
+            if (!simulationInterval) { // Update current display only if simulation is not running
+                currentGrowthRateSpan.textContent = r.toFixed(2);
+            }
+            console.log(`Growth rate slider adjusted: ${r}`);
+        });
+
+        initialPopulationSlider.addEventListener('input', () => {
+            initialPopulationValueSpan.textContent = initialPopulationSlider.value;
+            if (!simulationInterval) { // Only update initial population if simulation is not running
+                x = parseFloat(initialPopulationSlider.value);
+                currentPopulationXSpan.textContent = x.toFixed(4);
+                populationHistory[0] = x; // Update initial history point
+                drawChart(); // Redraw chart for new initial population
+                initializePond(); // Re-initialize pond with new initial population
+            }
+            console.log(`Initial population slider adjusted: ${x}`);
+        });
+
+        randomnessFactorSlider.addEventListener('input', () => {
+            randomnessFactorValueSpan.textContent = randomnessFactorSlider.value;
+            randomnessFactor = parseFloat(randomnessFactorSlider.value);
+            console.log(`Randomness factor slider adjusted: ${randomnessFactor}`);
+        });
+
+        randomnessFrequencySlider.addEventListener('input', () => {
+            randomnessFrequencyValueSpan.textContent = randomnessFrequencySlider.value;
+            randomnessFrequency = parseFloat(randomnessFrequencySlider.value);
+            console.log(`Randomness frequency slider adjusted: ${randomnessFrequency}`);
+        });
+
+        // --- Event Listeners for Buttons ---
+        startButton.addEventListener('click', () => {
+            console.log("Start button clicked. Attempting to start simulation.");
+            startSimulation();
+        });
+
+        stopButton.addEventListener('click', () => {
+            console.log("Stop button clicked. Attempting to stop simulation.");
+            stopSimulation();
+        });
+
+        resetButton.addEventListener('click', () => {
+            console.log("Reset button clicked. Stopping and re-initializing simulation.");
+            stopSimulation(); // Stop any running simulation first
+            initializeSimulation(); // Reset all parameters and history
+        });
+
+        // --- LLM Feature Event Listeners ---
+        getInsightButton.addEventListener('click', getPopulationInsight);
+        // Removed getScenarioButton.addEventListener('click', getPondScenario);
+
+
+        // --- Main Simulation Loop Logic ---
+        function runSimulationStep() {
+            // Use try-catch to log any errors within the simulation step
+            try {
+                generation++; // Increment the generation counter
+                // console.log(`--- Running simulation step ${generation} ---`); // Commented for less console noise during normal run
+
+                // 1. Logistic Map Calculation (Deterministic Chaos)
+                // The core equation: next population = r * current_population * (1 - current_population)
+                let nextX = r * x * (1 - x);
+                // console.log(`  Previous x: ${x.toFixed(4)}, Growth Rate (r): ${r.toFixed(2)}`);
+                // console.log(`  Logistic map calculated nextX (before clamping/randomness): ${nextX.toFixed(4)}`);
+
+                // Clamp nextX to stay within biological bounds [0, 1]
+                // A population cannot be negative or exceed the carrying capacity (1) in this normalized model.
+                nextX = Math.max(0, Math.min(1, nextX));
+                // console.log(`  nextX after clamping to [0, 1]: ${nextX.toFixed(4)}`);
+
+                // 2. Introduce Randomness (Stochastic Perturbation)
+                let appliedRandomEvent = false;
+                // Check if a random event should occur based on frequency
+                if (Math.random() < randomnessFrequency) {
+                    // Generate a random perturbation (positive or negative) within the defined factor
+                    const perturbation = (Math.random() * 2 - 1) * randomnessFactor;
+                    nextX += perturbation; // Apply the perturbation
+                    appliedRandomEvent = true;
+                    // console.log(`  Random event applied! Perturbation amount: ${perturbation.toFixed(4)}`);
+                }
+
+                // Clamp nextX again after potential random perturbation
+                nextX = Math.max(0, Math.min(1, nextX));
+                // console.log(`  Final nextX for this step (after random and clamp): ${nextX.toFixed(4)}`);
+
+                x = nextX; // Update the global current population variable
+
+                // Store the current population in history, maintaining a fixed size for the graph
+                populationHistory.push(x);
+                if (populationHistory.length > maxDataPoints) {
+                    populationHistory.shift(); // Remove the oldest data point if history is full
+                }
+
+                updateDisplay(appliedRandomEvent); // Update UI elements with current values
+                drawChart(); // Redraw the population chart
+
+                // Check for extinction and stop simulation if population hits zero or very close to zero
+                if (x <= 0.001) { // Using a small threshold instead of exact 0 for floating point robustness
+                    stopSimulation();
+                    displayMessage("Population Extinct!", `The goldfish population reached a negligible level (${x.toFixed(4)}) and the simulation has stopped.`);
+                    console.log(`Simulation stopped: Population effectively extinct at ${x.toFixed(4)}.`);
+                }
+            } catch (error) {
+                console.error("Error in runSimulationStep:", error);
+                stopSimulation(); // Stop simulation on error to prevent continuous errors
+                displayMessage("Simulation Error!", `An error occurred during simulation: ${error.message}. Check console for details.`);
+            }
+        }
+
+        // --- Start Simulation Function ---
+        function startSimulation() {
+            console.log("startSimulation function invoked.");
+            if (simulationInterval) {
+                console.log("Simulation already running. Ignoring start request.");
+                return; // Prevent starting multiple intervals
+            }
+            // Disable start button and enable stop button
+            startButton.disabled = true;
+            stopButton.disabled = false;
+            // Start the recurring simulation step
+            // Wrap setInterval in a try-catch to catch immediate errors
+            try {
+                simulationInterval = setInterval(runSimulationStep, 100); // Run every 100 milliseconds
+                console.log("Simulation interval successfully started.");
+            } catch (error) {
+                console.error("Error starting simulation interval:", error);
+                displayMessage("Start Error!", `Could not start simulation: ${error.message}.`);
+                startButton.disabled = false; // Re-enable start button on error
+                stopButton.disabled = true;
+            }
+        }
+
+        // --- Stop Simulation Function ---
+        function stopSimulation() {
+            console.log("stopSimulation function invoked.");
+            if (simulationInterval) { // Only try to clear if an interval exists
+                clearInterval(simulationInterval); // Clear the interval to stop the simulation loop
+                simulationInterval = null; // Reset the interval ID
+                console.log("Simulation interval cleared.");
+            }
+            // Re-enable start button and disable stop button
+            startButton.disabled = false;
+            stopButton.disabled = true;
+
+            // Also stop the pond animation when the main simulation stops
+            if (pondAnimationFrameId) {
+                cancelAnimationFrame(pondAnimationFrameId);
+                pondAnimationFrameId = null;
+                console.log("Pond animation frame canceled.");
+            }
+        }
+
+        // --- UI Display Update Function ---
+        function updateDisplay(randomEvent = false) {
+            currentGenerationSpan.textContent = generation;
+            currentPopulationXSpan.textContent = x.toFixed(4); // Display population with 4 decimal places
+            currentGrowthRateSpan.textContent = r.toFixed(2); // Display growth rate with 2 decimal places
+            randomEventAppliedSpan.textContent = randomEvent ? 'Yes' : 'No';
+            currentPopulationXSpan.style.color = (x <= 0.001) ? '#dc3545' : '#007bff'; // Red if near extinction
+            randomEventAppliedSpan.style.color = randomEvent ? '#dc3545' : '#28a745'; // Color coding for random event
+        }
+
+        // --- Chart Drawing Function (for population history) ---
+        function drawChart() {
+            // Check if context is available before drawing
+            if (!populationChartCtx) {
+                console.error("Population Chart Canvas 2D context is not available for drawing. Cannot draw chart.");
+                return;
+            }
+            populationChartCtx.clearRect(0, 0, populationChartCanvas.width, populationChartCanvas.height); // Clear the entire canvas for redrawing
+
+            // Define graph margins/paddings
+            const padding = 50;
+            const chartWidth = populationChartCanvas.width - padding;
+            const chartHeight = populationChartCanvas.height - padding;
+
+            // Draw axes
+            populationChartCtx.beginPath();
+            populationChartCtx.strokeStyle = '#999';
+            populationChartCtx.lineWidth = 1;
+            // Y-axis (population from 0 to 1)
+            populationChartCtx.moveTo(padding, 0);
+            populationChartCtx.lineTo(padding, chartHeight);
+            // X-axis (generations)
+            populationChartCtx.moveTo(padding, chartHeight);
+            populationChartCtx.lineTo(populationChartCanvas.width, chartHeight);
+            populationChartCtx.stroke();
+
+            // Y-axis labels
+            populationChartCtx.fillStyle = '#555';
+            populationChartCtx.font = '12px Arial';
+            populationChartCtx.textAlign = 'right';
+            populationChartCtx.textBaseline = 'middle'; // Align text vertically in the middle
+            populationChartCtx.fillText('1.0', padding - 10, 0 + 10); // Top (Population 1.0)
+            populationChartCtx.fillText('0.5', padding - 10, chartHeight / 2); // Middle (Population 0.5)
+            populationChartCtx.fillText('0.0', padding - 10, chartHeight - 5); // Bottom (Population 0.0)
+
+            // X-axis label
+            populationChartCtx.textAlign = 'center';
+            populationChartCtx.textBaseline = 'top'; // Align text vertically at the top
+            populationChartCtx.fillText('Generations', padding + chartWidth / 2, chartHeight + 10);
+
+
+            // Draw population line
+            populationChartCtx.beginPath();
+            populationChartCtx.strokeStyle = '#007bff'; // Blue line for population
+            populationChartCtx.lineWidth = 2;
+
+            // Calculate horizontal step for each data point
+            const stepX = chartWidth / (maxDataPoints - 1);
+
+            if (populationHistory.length > 0) { // Only draw if there's history
+                populationHistory.forEach((pop, index) => {
+                    // Calculate plot coordinates, inverting Y for canvas (0,0 is top-left)
+                    const plotX = padding + (index * stepX);
+                    const plotY = chartHeight - (pop * chartHeight);
+
+                    if (index === 0) {
+                        populationChartCtx.moveTo(plotX, plotY);
+                    } else {
+                        populationChartCtx.lineTo(plotX, plotY);
+                    }
+                });
+                populationChartCtx.stroke();
+
+                // Draw the current population point (a red dot at the end of the line)
+                populationChartCtx.beginPath();
+                populationChartCtx.fillStyle = '#dc3545'; // Red color for the current point
+                // Get the last population value from history
+                const currentPop = populationHistory[populationHistory.length - 1];
+                // Calculate its position on the graph
+                const currentPlotX = padding + (populationHistory.length - 1) * stepX;
+                const currentPlotY = chartHeight - (currentPop * chartHeight);
+                populationChartCtx.arc(currentPlotX, currentPlotY, 4, 0, Math.PI * 2); // Draw a circle
+                populationChartCtx.fill();
+            }
+        }
+
+        // --- Custom Message Box Function (to replace native alert() for better UI) ---
+        function displayMessage(title, message) {
+            let messageBox = document.getElementById('messageBox');
+            if (!messageBox) {
+                messageBox = document.createElement('div');
+                messageBox.id = 'messageBox';
+                messageBox.style.cssText = `
+                    position: fixed;
+                    top: 50%;
+                    left: 50%;
+                    transform: translate(-50%, -50%);
+                    background-color: #fff;
+                    padding: 30px;
+                    border-radius: 10px;
+                    box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+                    z-index: 1000;
+                    text-align: center;
+                    max-width: 400px;
+                    width: 90%;
+                    animation: fadeIn 0.3s ease-out;
+                `;
+                document.body.appendChild(messageBox);
+
+                const style = document.createElement('style');
+                style.innerHTML = `
+                    @keyframes fadeIn {
+                        from { opacity: 0; transform: translate(-50%, -60%); }
+                        to { opacity: 1; transform: translate(-50%, -50%); }
+                    }
+                    @keyframes fadeOut {
+                        from { opacity: 1; transform: translate(-50%, -50%); }
+                        to { opacity: 0; transform: translate(-50%, -60%); }
+                    }
+                    .message-box-overlay {
+                        position: fixed;
+                        top: 0;
+                        left: 0;
+                        width: 100%;
+                        height: 100%;
+                        background: rgba(0,0,0,0.5);
+                        z-index: 999;
+                        animation: fadeIn 0.3s ease-out;
+                    }
+                `;
+                document.head.appendChild(style);
+            }
+
+            let overlay = document.getElementById('messageBoxOverlay');
+            if (!overlay) {
+                overlay = document.createElement('div');
+                overlay.id = 'messageBoxOverlay';
+                overlay.className = 'message-box-overlay';
+                document.body.appendChild(overlay);
+            }
+
+            // Check if message is 'loading', if so, add spinner
+            const is_loading = message === 'loading';
+            const loading_content = is_loading ? '<div class="loading-spinner"></div> Loading...' : '';
+            const message_text = is_loading ? '' : message; // If loading, message text is empty
+
+            messageBox.innerHTML = `
+                <h3 style="color: #007bff; margin-bottom: 15px;">${title}</h3>
+                <p style="margin-bottom: 25px;">${message_text} ${loading_content}</p>
+                <button id="closeMessageBox" style="background-color: #007bff; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; font-size: 1em; ${is_loading ? 'display:none;' : ''}">OK</button>
+            `;
+            messageBox.style.display = 'block';
+            overlay.style.display = 'block';
+
+            if (!is_loading) {
+                document.getElementById('closeMessageBox').onclick = () => {
+                    messageBox.style.animation = 'fadeOut 0.3s ease-out forwards';
+                    overlay.style.animation = 'fadeOut 0.3s ease-out forwards';
+                    setTimeout(() => {
+                        messageBox.style.display = 'none';
+                        overlay.style.display = 'none';
+                    }, 300);
+                };
+            }
+        }
+
+        // --- Function to hide the message box
+        function hideMessageBox() {
+            const messageBox = document.getElementById('messageBox');
+            const overlay = document.getElementById('messageBoxOverlay');
+            if (messageBox) messageBox.style.display = 'none';
+            if (overlay) overlay.style.display = 'none';
+        }
+
+
+        // --- LLM Integration Functions ---
+
+        async function callGeminiAPI(prompt, outputTitle) {
+            llmOutputArea.style.display = 'block'; // Ensure the LLM output area is visible
+            llmOutputTitle.textContent = outputTitle; // Set the title (e.g., "Population Insight:")
+            llmOutputText.innerHTML = '<div class="loading-spinner"></div> Generating...'; // Show loading spinner
+            // Disable LLM buttons while API call is in progress
+            getInsightButton.disabled = true;
+
+            console.log("Calling Gemini API with prompt:", prompt);
+
+            let chatHistory = [];
+            chatHistory.push({ role: "user", parts: [{ text: prompt }] });
+            const payload = { contents: chatHistory };
+            const apiKey = ""; // Canvas will provide this at runtime
+
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+
+            let generatedText = "Error: Could not get response.";
+            try {
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(`API error: ${response.status} ${response.statusText} - ${JSON.stringify(errorData)}`);
+                }
+
+                const result = await response.json();
+                console.log("Gemini API response:", result);
+
+                if (result.candidates && result.candidates.length > 0 &&
+                    result.candidates[0].content && result.candidates[0].content.parts &&
+                    result.candidates[0].content.parts.length > 0) {
+                    generatedText = result.candidates[0].content.parts[0].text;
+                } else {
+                    console.error("Unexpected Gemini API response structure:", result);
+                    generatedText = "Could not generate response. Unexpected API structure.";
+                }
+            } catch (error) {
+                console.error("Error calling Gemini API:", error);
+                generatedText = `Error generating response: ${error.message}`;
+            } finally {
+                // Update the text content after generation (or error)
+                llmOutputText.textContent = generatedText;
+                // Re-enable LLM buttons
+                getInsightButton.disabled = false;
+            }
+        }
+
+        async function getPopulationInsight() {
+            let r_behavior_description = "";
+            let chaos_explanation_general = "Chaos theory describes how seemingly random behavior can arise from simple, deterministic rules when systems are highly sensitive to initial conditions. This is often called the 'butterfly effect' because a tiny, unnoticeable change at one point can lead to drastically different outcomes later on. In population models, it means precise long-term prediction is impossible even if we know all the rules, due to inherent unpredictability.";
+
+            if (r < 3.0) {
+                r_behavior_description = "the population will likely stabilize at a single point.";
+            } else if (r >= 3.0 && r < 3.449) {
+                r_behavior_description = "the population will oscillate between two or more values (period doubling).";
+            } else if (r >= 3.449 && r < 3.569) {
+                r_behavior_description = "the population will exhibit more complex oscillations (further period doubling).";
+            } else { // r >= 3.569
+                r_behavior_description = "the population is in a chaotic regime, making long-term prediction unpredictable despite deterministic rules.";
+            }
+
+            let x_trend_description = "";
+            const lastX = populationHistory[populationHistory.length - 1];
+            if (generation > 1 && populationHistory.length > 1) {
+                const prevX = populationHistory[populationHistory.length - 2];
+                if (lastX > prevX) {
+                    x_trend_description = "The population is currently growing.";
+                } else if (lastX < prevX) {
+                    x_trend_description = "The population is currently declining.";
+                } else {
+                    x_trend_description = "The population is currently stable.";
+                }
+            } else {
+                x_trend_description = "The simulation has just started or reset.";
+            }
+
+            const randomness_effect = `The 'Randomness Factor' (currently ${randomnessFactor.toFixed(3)}) and 'Randomness Frequency' (currently ${randomnessFrequency.toFixed(2)}) introduce external, unpredictable disturbances that mimic real-world events, like sudden environmental shifts or diseases, further complicating the population's path.`;
+
+
+            const insightPrompt = `This simulation models goldfish population using the logistic map (P_next = r * P * (1 - P)) combined with external random perturbations. The goal is to illustrate how deterministic systems can exhibit chaotic behavior, amplified by randomness.
+
+            Given the current growth rate 'r' of ${r.toFixed(2)} and current normalized population 'x' of ${x.toFixed(4)}:
+            - Based on 'r', the population behavior is expected to be: ${r_behavior_description}
+            - Current population 'x' status: ${x_trend_description}
+            - Explanation of Chaos Theory in this model: ${chaos_explanation_general}
+            - Effect of Randomness: ${randomness_effect}
+
+            Provide a concise, overall explanation of the model and these results, highlighting the interplay of chaos and randomness, in about 5-7 sentences.`;
+
+
+            callGeminiAPI(insightPrompt, "Population Model & Results Insight:");
+        }
+
+
+        // --- Initial Setup Call ---
+        // This ensures the simulation state and chart are drawn as soon as the script loads.
+        // It's crucial to call this after the DOM is fully loaded, so we'll use window.onload.
+        window.onload = function() {
+            initializeSimulation();
+            console.log("Script loaded and initial simulation state set. Ready to start.");
+
+            // Add a resize listener for the pond canvas to ensure responsiveness
+            window.addEventListener('resize', () => {
+                if (pondCanvas) {
+                    const container = pondCanvas.parentElement;
+                    pondCanvas.width = container.clientWidth;
+                    pondCanvas.height = container.clientHeight;
+                }
+                drawChart(); // Redraw chart on resize too
+                initializePond(); // Re-initialize pond to distribute fish correctly on resize
+            });
+        };
+    </script>
 </body>
 </html>
