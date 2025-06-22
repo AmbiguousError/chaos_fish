@@ -199,7 +199,7 @@
             background-color: #fff;
             display: block;
             margin: 0 auto;
-            width: 100%; /* Make canvas responsive within its container */
+            width: 100%;
             height: auto; /* Maintain aspect ratio */
         }
 
@@ -419,7 +419,7 @@
             <button id="stopButton" disabled>Stop Simulation</button>
             <button id="resetButton">Reset Simulation</button>
             <button id="getInsightButton">Get Population Insight ✨</button>
-            <button id="generateBifurcationButton">Generate Bifurcation Diagram 📈</button>
+            <button id="generateBifurcationButton" style="display: none;">Generate Bifurcation Diagram 📈</button> <!-- Hide button now it's auto-generated -->
         </div>
 
         <div class="simulation-area">
@@ -583,7 +583,7 @@
             updateDisplay(); // Update the displayed current values
             drawChart(); // Draw the initial state on the population chart
             drawReturnMap(); // Draw the initial state on the return map chart
-            drawBifurcationMapInitialState(); // Initialize bifurcation map
+            drawBifurcationMapInitialState(); // Initialize bifurcation map with axis and label
 
             console.log(`Initial state set: r=${r.toFixed(2)}, x=${x.toFixed(4)}, ` +
                         `randomnessFactor=${randomnessFactor.toFixed(3)}, randomnessFrequency=${randomnessFrequency.toFixed(2)}`);
@@ -775,7 +775,7 @@
 
         // --- LLM Feature Event Listeners ---
         getInsightButton.addEventListener('click', getPopulationInsight);
-        generateBifurcationButton.addEventListener('click', generateBifurcationDiagram); // New event listener
+        // generateBifurcationButton.addEventListener('click', generateBifurcationDiagram); // Removed button event listener
 
 
         // --- Main Simulation Loop Logic ---
@@ -840,39 +840,66 @@
         }
 
         // --- Start Simulation Function ---
-        function startSimulation() {
-            console.log("startSimulation function invoked.");
-            if (simulationInterval) {
-                console.log("Simulation already running. Ignoring start request.");
+        async function startSimulation() { // Made async to await bifurcation generation
+            console.log("startSimulation function invoked. simulationInterval:", simulationInterval);
+            if (simulationInterval !== null) { // Check if an interval is already running
+                console.log("Simulation already running. Ignoring start request to prevent multiple intervals.");
                 return; // Prevent starting multiple intervals
             }
-            // Disable start button and enable stop button
+
+            // Disable buttons during diagram generation
+            startButton.disabled = true;
+            stopButton.disabled = true; // Keep stop disabled until diagram is done and simulation starts
+            getInsightButton.disabled = true;
+            generateBifurcationButton.disabled = true; // This button is now hidden, but good to keep state
+
+            console.log("Buttons state: Start disabled, Stop disabled, AI buttons disabled.");
+
+            // Generate bifurcation diagram first
+            displayMessage("Generating Bifurcation Diagram", "loading");
+            console.log("Initiating Bifurcation Diagram generation from startSimulation.");
+            await generateBifurcationDiagram(true); // Pass true to indicate it's called from start, not button
+            hideMessageBox(); // Hide the loading message once generated
+            console.log("Bifurcation Diagram generation complete.");
+
+            // Now start the main simulation loop
             startButton.disabled = true;
             stopButton.disabled = false;
-            // Start the recurring simulation step
-            // Wrap setInterval in a try-catch to catch immediate errors
+            getInsightButton.disabled = false; // Re-enable AI insight button after diagram is done
+            generateBifurcationButton.disabled = false; // Even if hidden, keep state consistent
+
+            console.log("Buttons state: Start disabled, Stop enabled, AI buttons enabled after diagram.");
+
             try {
                 simulationInterval = setInterval(runSimulationStep, 100); // Run every 100 milliseconds
-                console.log("Simulation interval successfully started.");
+                console.log("Simulation interval successfully started. New interval ID:", simulationInterval);
             } catch (error) {
                 console.error("Error starting simulation interval:", error);
                 displayMessage("Start Error!", `Could not start simulation: ${error.message}.`);
                 startButton.disabled = false; // Re-enable start button on error
                 stopButton.disabled = true;
+                getInsightButton.disabled = false;
+                generateBifurcationButton.disabled = false;
+                console.log("Buttons state after error: Start enabled, Stop disabled, AI buttons enabled.");
             }
         }
 
         // --- Stop Simulation Function ---
         function stopSimulation() {
-            console.log("stopSimulation function invoked.");
-            if (simulationInterval) { // Only try to clear if an interval exists
+            console.log("stopSimulation function invoked. simulationInterval before clearing:", simulationInterval);
+            if (simulationInterval !== null) { // Only try to clear if an interval exists
                 clearInterval(simulationInterval); // Clear the interval to stop the simulation loop
                 simulationInterval = null; // Reset the interval ID
-                console.log("Simulation interval cleared.");
+                console.log("Simulation interval cleared. simulationInterval is now:", simulationInterval);
+            } else {
+                console.log("No simulation interval was active to clear.");
             }
             // Re-enable start button and disable stop button
             startButton.disabled = false;
             stopButton.disabled = true;
+            getInsightButton.disabled = false; // Ensure LLM button is enabled
+            generateBifurcationButton.disabled = false; // Ensure LLM button is enabled
+            console.log("Buttons state: Start enabled, Stop disabled, AI buttons enabled.");
 
             // Also stop the pond animation when the main simulation stops
             if (pondAnimationFrameId) {
@@ -1113,26 +1140,25 @@
             bifurcationMapCtx.fillStyle = '#666';
             bifurcationMapCtx.textAlign = 'center';
             bifurcationMapCtx.textBaseline = 'middle';
-            bifurcationMapCtx.fillText('Click "Generate Bifurcation Diagram" to plot', bifurcationMapCanvas.width / 2, bifurcationMapCanvas.height / 2);
+            bifurcationMapCtx.fillText('Generating on Start...', bifurcationMapCanvas.width / 2, bifurcationMapCanvas.height / 2);
         }
 
         // --- Generate Bifurcation Diagram Function ---
-        async function generateBifurcationDiagram() {
+        async function generateBifurcationDiagram() { // Removed the 'force' parameter as it's always called on start
             if (!bifurcationMapCtx) {
                 console.error("Bifurcation Map Canvas 2D context is not available for drawing.");
                 return;
             }
-            if (generation !== 0) { // Only allow generation from reset state to avoid confusion
-                displayMessage("Reset Simulation", "Please reset the simulation first to generate a new Bifurcation Diagram cleanly.");
-                return;
-            }
 
             bifurcationMapCtx.clearRect(0, 0, bifurcationMapCanvas.width, bifurcationMapCanvas.height); // Clear existing points
-            drawBifurcationMapInitialState(); // Redraw axes/labels
+            drawBifurcationMapInitialState(); // Redraw axes/labels and "Generating on Start..." message
 
-            displayMessage("Generating Bifurcation Diagram", "loading");
-            generateBifurcationButton.disabled = true;
-            getInsightButton.disabled = true; // Disable other AI button during generation
+            // No need for a separate message box here, as startSimulation handles global loading state
+            // displayMessage("Generating Bifurcation Diagram", "loading");
+
+            // Disable only the generate button, which is now hidden anyway
+            // generateBifurcationButton.disabled = true;
+            // getInsightButton.disabled = true; // Handled by startSimulation now
 
             const rStart = 0.1;
             const rEnd = 4.0;
@@ -1172,11 +1198,10 @@
             }
 
             bifurcationMapCtx.globalAlpha = 1.0; // Reset alpha
-            hideMessageBox();
-            generateBifurcationButton.disabled = false;
-            getInsightButton.disabled = false;
-            displayMessage("Bifurcation Diagram Generated!", "The bifurcation diagram has been plotted. Observe how the population's long-term behavior changes with the growth rate (r).");
-            console.log("Bifurcation diagram generation complete.");
+            // hideMessageBox(); // Message box is managed by startSimulation
+            // generateBifurcationButton.disabled = false; // Handled by startSimulation
+            // getInsightButton.disabled = false; // Handled by startSimulation
+            console.log("Bifurcation diagram generation process finished.");
         }
 
 
@@ -1284,7 +1309,7 @@
             let chatHistory = [];
             chatHistory.push({ role: "user", parts: [{ text: prompt }] });
             const payload = { contents: chatHistory };
-            const apiKey = "AIzaSyBe4FaOSzP9GaqTpcvW8lV-wKRu9nH82sA"; // Canvas will provide this at runtime
+            const apiKey = "AIzaSyBe4FaOSzP9GaqTpcvW8lV-wKRu9nH82sAv"; // Canvas will provide this at runtime
 
             const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
 
@@ -1368,8 +1393,8 @@
             // Explanation of fish population
             const fish_population_explanation = `In this simulation, the 'population (x)' represents the goldfish population as a normalized value between 0 and 1. '0' signifies extinction (no fish in the pond), while '1' represents the maximum carrying capacity of the pond (the largest population the environment can sustainably support, given resources). This normalization allows us to focus on the proportional changes and dynamics of the population relative to its environmental limits, simplifying the complexity of tracking exact large numbers of individual fish while still illustrating fundamental ecological principles.`;
 
-            // Explanation of Bifurcation Diagram (to be added)
-            const bifurcation_diagram_explanation = "The Bifurcation Diagram (which can be generated by clicking its button) provides a global view of the system's long-term behavior across the entire range of 'r' values. It visually demonstrates the transition from stable population sizes to predictable oscillations (period doubling) and then into the dense, unpredictable regions characteristic of chaos. This diagram is crucial for seeing the 'road to chaos' and understanding how sensitive the system's overall behavior is to changes in its growth rate 'r'.";
+            // Explanation of Bifurcation Diagram
+            const bifurcation_diagram_explanation_in_detail = "The Bifurcation Diagram provides a global view of the system's long-term behavior across the entire range of 'r' values. This diagram vividly illustrates the 'road to chaos,' showing how the goldfish population transitions from a single stable size (a single line) to predictable oscillations (period doubling, appearing as branching lines) and then abruptly into dense, unpredictable regions (filled bands) characteristic of chaos. Each point in the diagram represents a possible long-term population value for a given 'r'. This visual is crucial for understanding how qualitatively different behaviors emerge as 'r' changes, highlighting the system's inherent sensitivity and the fundamental principles of chaos theory across its full dynamic range.";
 
 
             const insightPrompt = `This simulation models goldfish population dynamics using the logistic map (P_next = r * P * (1 - P)) and incorporates random perturbations. It visually demonstrates the **Butterfly Effect** and the principles of chaos theory.
@@ -1377,9 +1402,8 @@
             - **Understanding the Goldfish Population (x):** ${fish_population_explanation}
             - **Population Behavior (based on r=${r.toFixed(2)}):** ${r_behavior_description}
             - **Current Trend:** ${x_trend_description}
-            - **Chaos Theory & The Butterfly Effect in the Pond:** This simulation vividly exemplifies how even simple, deterministic rules can lead to profound long-term unpredictability in the goldfish population. For 'r' values in the chaotic range, a minute, unmeasurable difference in the initial goldfish population, or a tiny random event (like a single extra mosquito larva for food or an unexpected mild day), will cause the entire population trajectory to diverge wildly and unpredictably over time. This is the core of the 'butterfly effect' – where small, seemingly insignificant causes lead to large, unforeseen differences in the pond's fish numbers. The system is inherently deterministic, following the logistic map, yet its long-term state is practically unknowable.
+            - **Chaos Theory & The Butterfly Effect in the Pond:** This simulation vividly exemplifies how even simple, deterministic rules can lead to profound long-term unpredictability in the goldfish population. For 'r' values in the chaotic range, a minute, unmeasurable difference in the initial goldfish population, or a tiny random event (like a single extra mosquito larva for food or an unexpected mild day), will cause the entire population trajectory to diverge wildly and unpredictably over time. This is the core of the 'butterfly effect' – where small, seemingly insignificant causes lead to large, unforeseen differences in the pond's fish numbers. The system is inherently deterministic, following the logistic map, yet its long-term state is practically unknowable. **The Bifurcation Diagram provides a global view of this phenomenon, visually demonstrating the transitions from stable points to period-doubling oscillations, and eventually to the dense, unpredictable regions characteristic of chaos as the 'r' value increases, showcasing the underlying structure of chaos itself.**
             - **Visualizing Chaos with the Return Map:** The Phase Space Plot (Return Map) is a crucial tool for understanding this. It plots the current population ($x_n$) against the next ($x_{n+1}$). It always shows points on the parabolic curve derived from the logistic map, confirming the deterministic rule. However, in chaotic regimes, instead of settling into fixed points or simple cycles, the points densely fill a section of the parabola, showcasing the 'strange attractor' and the system's bounded yet unpredictable nature. Randomness causes points to scatter slightly *off* this perfect curve, representing external disturbances.
-            - **Global View: The Bifurcation Diagram:** ${bifurcation_diagram_explanation}
             - **Impact of Randomness:** ${randomness_effect}
 
             Provide a comprehensive, concise analysis explaining how these elements interact to produce the observed simulation results, focusing on the manifestation of the butterfly effect and the role of both chaos and randomness in the goldfish population. Keep the explanation to about 10-15 sentences.`;
@@ -1417,7 +1441,7 @@
                     const container = bifurcationMapCanvas.parentElement;
                     bifurcationMapCanvas.width = container.clientWidth;
                     bifurcationMapCanvas.height = container.clientWidth * (400/800); // Maintain aspect ratio
-                    drawBifurcationMapInitialState(); // Redraw labels
+                    drawBifurcationMapInitialState(); // Redraw labels for resizing
                 }
 
                 drawChart(); // Redraw chart on resize too
