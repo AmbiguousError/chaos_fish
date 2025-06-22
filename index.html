@@ -171,7 +171,6 @@
 
         .chart-container {
             flex: 2;
-            min-width: 25rem; /* Adjusted min-width for mobile responsiveness */
             background-color: #f8f9fa;
             padding: 1.25rem;
             border-radius: 0.5rem;
@@ -180,7 +179,6 @@
 
         .current-values {
             flex: 1;
-            min-width: 15rem; /* Adjusted min-width for mobile */
             background-color: #f8f9fa;
             padding: 1.25rem;
             border-radius: 0.5rem;
@@ -200,7 +198,8 @@
             display: block;
             margin: 0 auto;
             width: 100%;
-            height: auto; /* Maintain aspect ratio */
+            /* Maintain aspect ratio dynamically */
+            aspect-ratio: 800 / 400; /* Original desktop aspect ratio */
         }
 
         .current-values p {
@@ -261,10 +260,9 @@
         /* New styles for the pond animation area */
         .pond-container {
             flex: 2;
-            min-width: 25rem;
             background-color: #d0f0f8;
             border: 0.3125rem solid #007bff;
-            border-radius: 50%;
+            border-radius: 50%; /* Remains circular on desktop */
             overflow: hidden;
             position: relative;
             aspect-ratio: 16 / 9;
@@ -337,30 +335,31 @@
             margin-right: auto;
             max-width: 800px;
         }
+        /* Canvases will scale based on aspect-ratio property, width: 100% */
         #returnMapCanvas, #bifurcationMapCanvas {
             border: 0.0625rem solid #ccc;
             background-color: #fff;
             display: block;
             margin: 0 auto;
             width: 100%;
-            height: auto;
+            aspect-ratio: 800 / 400; /* Preserve desktop aspect ratio */
         }
 
 
-        /* Mobile-First Adjustments */
+        /* Mobile-First Adjustments (Default styles for smaller screens) */
         @media (max-width: 768px) {
             .container {
-                padding: 1rem; /* Smaller padding on mobile */
+                padding: 1rem;
             }
             h1 {
-                font-size: 1.8rem; /* Smaller heading on mobile */
+                font-size: 1.8rem;
             }
             p, .control-group .description, #llmOutputText {
-                font-size: 1rem; /* Base font size for mobile readability */
+                font-size: 1rem;
             }
             .controls {
-                grid-template-columns: 1fr; /* Stack controls on small screens */
-                gap: 1rem; /* Smaller gap */
+                grid-template-columns: 1fr; /* Stack controls vertically */
+                gap: 1rem;
                 padding: 1rem;
             }
             button {
@@ -368,23 +367,23 @@
                 width: 100%; /* Full width buttons */
             }
             .simulation-area {
-                flex-direction: column; /* Stack chart, pond, and values vertically */
-                gap: 1.5rem; /* Smaller gap */
+                flex-direction: column; /* Stack chart, pond, values vertically */
+                gap: 1.5rem;
             }
+            /* Remove min-width and fixed height, rely on aspect-ratio for canvases */
             .chart-container, .current-values, .pond-container, .return-map-container, .bifurcation-map-container {
-                min-width: unset; /* Remove min-width constraints */
+                min-width: unset; /* Remove minimum width constraints */
                 width: 100%; /* Take full width */
                 border-radius: 0.5rem; /* Consistent border-radius */
-                aspect-ratio: unset; /* Let height be flexible or set specific height */
-                height: 20rem; /* Fixed height for canvases on small screens for better consistency */
                 margin-bottom: 1rem; /* Adjust margin */
+                height: auto; /* Allow height to be determined by aspect-ratio */
             }
             .pond-container {
-                border-radius: 0.5rem; /* Square off pond on mobile */
+                border-radius: 0.5rem; /* Square off pond on mobile for better fit */
                 box-shadow: inset 0 0 0.9375rem rgba(0, 123, 255, 0.5), 0 0.25rem 0.5rem rgba(0, 0, 0, 0.1);
             }
             .current-values {
-                min-width: unset; /* Remove min-width */
+                min-width: unset;
             }
             #llmOutputArea {
                 padding: 1rem;
@@ -395,7 +394,7 @@
             }
         }
 
-        /* Media query for very small mobile devices if needed */
+        /* Further adjustments for very small mobile devices */
         @media (max-width: 480px) {
             .container {
                 padding: 0.5rem;
@@ -963,7 +962,7 @@
 
             const padding = 50;
             const chartWidth = bifurcationMapCanvas.width - padding;
-            const chartHeight = bifurcationMapCanvas.height - padding; // Corrected: Used bifurcationMapCanvas.height
+            const chartHeight = bifurcationMapCanvas.height - padding;
 
             // Draw X and Y axes
             bifurcationMapCtx.beginPath();
@@ -1253,7 +1252,7 @@
 
             const chatHistory = [{ role: "user", parts: [{ text: prompt }] }];
             const payload = { contents: chatHistory };
-            const apiKey = "AIzaSyBe4FaOSzP9GaqTpcvW8lV-wKRu9nH82sA"; // Canvas will provide this API key at runtime
+            const apiKey = ""; // Canvas will provide this API key at runtime
 
             const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
 
