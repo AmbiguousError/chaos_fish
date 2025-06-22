@@ -199,7 +199,7 @@
             background-color: #fff;
             display: block;
             margin: 0 auto;
-            width: 100%; /* Make canvas responsive within its container */
+            width: 100%;
             height: auto; /* Maintain aspect ratio */
         }
 
@@ -456,7 +456,7 @@
         <!-- New section for the Bifurcation Diagram Chart -->
         <div class="bifurcation-map-container">
             <h2>Bifurcation Diagram (Attractors vs. Growth Rate 'r')</h2>
-            <p class="description">This diagram shows the long-term population values (attractors) for each growth rate 'r'. It visually demonstrates the transition from stable points to periodic cycles, and then to chaotic behavior (the dense, filled regions), illustrating the pathway to chaos for the goldfish population.</p>
+            <p class="description">This diagram is like a roadmap for the goldfish population's long-term future, revealing its behavior as you change the "growth rate" (the 'r' value). It plots the population's eventual settled values (attractors) for each 'r'. You'll see it transition from a single stable line, to splitting lines (oscillations), and then to dense, filled regions as chaos emerges. It's a visual journey showing how the system shifts from predictable to unpredictable patterns.</p>
             <canvas id="bifurcationMapCanvas" width="800" height="400"></canvas>
         </div>
 
@@ -469,7 +469,9 @@
 
     <!-- Embedded JavaScript for simulation logic and interactions -->
     <script>
-        // DOM Elements - Get references to all necessary HTML elements
+        // === 1. DOM Element References ===
+        // Get references to all necessary HTML elements by their IDs.
+        // Caching these references improves performance by avoiding repeated DOM lookups.
         const growthRateSlider = document.getElementById('growthRate');
         const growthRateValueSpan = document.getElementById('growthRateValue');
         const initialPopulationSlider = document.getElementById('initialPopulation');
@@ -484,12 +486,12 @@
         const resetButton = document.getElementById('resetButton');
 
         const getInsightButton = document.getElementById('getInsightButton');
-        const generateBifurcationButton = document.getElementById('generateBifurcationButton'); // New button
+        const generateBifurcationButton = document.getElementById('generateBifurcationButton'); // This button is now visible again.
         const llmOutputArea = document.getElementById('llmOutputArea');
-        const llmOutputTitle = llmOutputArea.querySelector('h3'); // Reference the h3 for dynamic title
+        const llmOutputTitle = llmOutputArea.querySelector('h3');
         const llmOutputText = document.getElementById('llmOutputText');
 
-        // Moving Average DOM elements
+        // References for Moving Average controls
         const movingAverageEnabledCheckbox = document.getElementById('movingAverageEnabled');
         const movingAverageWindowSlider = document.getElementById('movingAverageWindow');
         const movingAverageWindowValueSpan = document.getElementById('movingAverageWindowValue');
@@ -500,389 +502,246 @@
         const currentGrowthRateSpan = document.getElementById('currentGrowthRate');
         const randomEventAppliedSpan = document.getElementById('randomEventApplied');
 
-        // Canvas for population chart
+        // References for Canvas elements and their 2D rendering contexts
         const populationChartCanvas = document.getElementById('populationChart');
         const populationChartCtx = populationChartCanvas ? populationChartCanvas.getContext('2d') : null;
-        if (!populationChartCanvas) {
-            console.error("Error: Population Chart Canvas element not found!");
-        }
-        if (!populationChartCtx) {
-            console.error("Error: 2D context could not be obtained from population chart canvas!");
-        }
+        // Robust check: Ensure canvases and their contexts are found
+        if (!populationChartCanvas) console.error("Error: Population Chart Canvas element not found!");
+        if (!populationChartCtx) console.error("Error: 2D context could not be obtained from population chart canvas!");
 
-        // Canvas for pond animation
         const pondCanvas = document.getElementById('pondCanvas');
         const pondCtx = pondCanvas ? pondCanvas.getContext('2d') : null;
-        if (!pondCanvas) {
-            console.error("Error: Pond Canvas element not found!");
-        }
-        if (!pondCtx) {
-            console.error("Error: 2D context could not be obtained from pond canvas!");
-        }
+        if (!pondCanvas) console.error("Error: Pond Canvas element not found!");
+        if (!pondCtx) console.error("Error: 2D context could not be obtained from pond canvas!");
 
-        // Canvas for Return Map
         const returnMapCanvas = document.getElementById('returnMapCanvas');
         const returnMapCtx = returnMapCanvas ? returnMapCanvas.getContext('2d') : null;
-        if (!returnMapCanvas) {
-            console.error("Error: Return Map Canvas element not found!");
-        }
-        if (!returnMapCtx) {
-            console.error("Error: 2D context could not be obtained from return map canvas!");
-        }
+        if (!returnMapCanvas) console.error("Error: Return Map Canvas element not found!");
+        if (!returnMapCtx) console.error("Error: 2D context could not be obtained from return map canvas!");
 
-        // Canvas for Bifurcation Map
-        const bifurcationMapCanvas = document.getElementById('bifurcationMapCanvas'); // New canvas element
-        const bifurcationMapCtx = bifurcationMapCanvas ? bifurcationMapCanvas.getContext('2d') : null; // New context
-        if (!bifurcationMapCanvas) {
-            console.error("Error: Bifurcation Map Canvas element not found!");
-        }
-        if (!bifurcationMapCtx) {
-            console.error("Error: 2D context could not be obtained from bifurcation map canvas!");
-        }
+        const bifurcationMapCanvas = document.getElementById('bifurcationMapCanvas');
+        const bifurcationMapCtx = bifurcationMapCanvas ? bifurcationMapCanvas.getContext('2d') : null;
+        if (!bifurcationMapCanvas) console.error("Error: Bifurcation Map Canvas element not found!");
+        if (!bifurcationMapCtx) console.error("Error: 2D context could not be obtained from bifurcation map canvas!");
 
 
-        // Simulation Variables
-        let r; // Growth rate for the logistic map
-        let x; // Current normalized population (value between 0 and 1)
-        let randomnessFactor; // Magnitude of random perturbation to the population
-        let randomnessFrequency; // Probability (0-1) of a random event occurring each step
-        let generation = 0; // Current simulation generation/step
-        let simulationInterval = null; // Stores the ID of the setInterval timer for stopping it
-        let pondAnimationFrameId = null; // Stores the requestAnimationFrame ID for pond animation
+        // === 2. Simulation Variables ===
+        let r; // Growth rate for the logistic map (controls population dynamics).
+        let x; // Current normalized population (0 = extinction, 1 = carrying capacity).
+        let randomnessFactor; // Maximum magnitude of random perturbations applied.
+        let randomnessFrequency; // Probability (0-1) of a random event occurring each step.
+        let generation = 0; // Current simulation step/generation count.
+        let simulationInterval = null; // Stores the ID returned by setInterval for stopping the main simulation loop.
+        let pondAnimationFrameId = null; // Stores the ID returned by requestAnimationFrame for the pond animation.
 
-        const populationHistory = []; // Array to store historical population values for charting
-        const maxDataPoints = 200; // Maximum number of data points to display on the graph
+        const populationHistory = []; // Array to store historical 'x' values for the time series chart.
+        const maxDataPoints = 200; // Max number of data points to display on the time series chart.
 
-        // Moving Average Variables
-        let movingAverageEnabled = false;
-        let movingAverageWindow = 10;
+        // Moving Average settings
+        let movingAverageEnabled = false; // Flag to enable/disable the moving average line.
+        let movingAverageWindow = 10; // Number of previous data points to average for the moving average line.
 
-        // Pond Animation Variables
-        const maxPondFish = 150; // Maximum number of fish to display in the pond
-        let pondFish = []; // Array to store individual fish objects {x, y, dx, dy, color, size}
+        // Pond Animation settings
+        const maxPondFish = 150; // Visual maximum number of fish displayed in the pond animation.
+        let pondFish = []; // Array of objects representing individual fish in the pond animation.
 
-        // --- Initialization Function ---
-        // Sets up the initial state of the simulation based on slider values
+
+        // === 3. Core Simulation Functions ===
+
+        /**
+         * Initializes or resets the simulation parameters and UI.
+         */
         function initializeSimulation() {
             console.log("initializeSimulation called: Setting up initial parameters.");
+
+            // Parse initial values from UI sliders
             r = parseFloat(growthRateSlider.value);
             x = parseFloat(initialPopulationSlider.value);
             randomnessFactor = parseFloat(randomnessFactorSlider.value);
             randomnessFrequency = parseFloat(randomnessFrequencySlider.value);
-            // Initialize moving average settings from controls
+
+            // Get initial state of moving average controls
             movingAverageEnabled = movingAverageEnabledCheckbox.checked;
             movingAverageWindow = parseInt(movingAverageWindowSlider.value);
 
+            // Reset simulation state
+            generation = 0;
+            populationHistory.length = 0; // Clear previous population data
+            populationHistory.push(x); // Add initial population to history
 
-            generation = 0; // Reset generation count
-            populationHistory.length = 0; // Clear any previous population data
-            populationHistory.push(x); // Add the initial population to history
-
-            initializePond(); // Set up initial fish in the pond
-
-            updateDisplay(); // Update the displayed current values
-            drawChart(); // Draw the initial state on the population chart
-            drawReturnMap(); // Draw the initial state on the return map chart
-            drawBifurcationMapInitialState(); // Initialize bifurcation map
+            // Initialize visual components
+            initializePond(); // Setup fish in the pond
+            updateDisplay(); // Update current state numerical display
+            drawChart(); // Draw the initial population chart
+            drawReturnMap(); // Draw the initial return map axes and parabola
+            drawBifurcationMapInitialState(); // Draw initial state for bifurcation diagram
 
             console.log(`Initial state set: r=${r.toFixed(2)}, x=${x.toFixed(4)}, ` +
                         `randomnessFactor=${randomnessFactor.toFixed(3)}, randomnessFrequency=${randomnessFrequency.toFixed(2)}`);
 
-            // Ensure pond canvas is sized correctly and start its animation
+            // Dynamically size canvases based on their container's current size (for responsiveness)
+            // And ensure pond animation loop is running
             if (pondCanvas) {
                 const container = pondCanvas.parentElement;
                 pondCanvas.width = container.clientWidth;
                 pondCanvas.height = container.clientHeight;
-                // Stop any previous animation frame before starting a new one
                 if (pondAnimationFrameId) {
-                    cancelAnimationFrame(pondAnimationFrameId);
+                    cancelAnimationFrame(pondAnimationFrameId); // Stop any existing animation frame
                 }
                 animatePond(); // Start the pond animation loop
             }
-
-            // Ensure return map canvas is sized correctly on init
             if (returnMapCanvas) {
                 const container = returnMapCanvas.parentElement;
                 returnMapCanvas.width = container.clientWidth;
                 returnMapCanvas.height = container.clientHeight;
             }
-             // Ensure bifurcation map canvas is sized correctly on init
             if (bifurcationMapCanvas) {
                 const container = bifurcationMapCanvas.parentElement;
                 bifurcationMapCanvas.width = container.clientWidth;
                 bifurcationMapCanvas.height = container.clientHeight;
             }
 
-             // Reset LLM output area on initialization
-            llmOutputArea.style.display = 'block'; // Ensure it's visible with initial message
+            // Reset LLM output area on initialization
+            llmOutputArea.style.display = 'block';
             llmOutputTitle.textContent = "AI-Generated Insight:";
             llmOutputText.innerHTML = "Click the \"Get Population Insight ✨\" button to get an AI-powered analysis of your goldfish pond!";
         }
 
-        // --- Pond Initialization ---
-        function initializePond() {
-            pondFish = []; // Clear existing fish
-            const currentFishCount = Math.floor(x * maxPondFish);
-            if (pondCanvas && pondCanvas.width > 0 && pondCanvas.height > 0) { // Check if canvas dimensions are valid
-                for (let i = 0; i < currentFishCount; i++) {
-                    // Random initial position within pond bounds
-                    const size = 3 + Math.random() * 4; // Fish size between 3 and 7
-                    pondFish.push({
-                        x: Math.random() * pondCanvas.width,
-                        y: Math.random() * pondCanvas.height,
-                        dx: (Math.random() - 0.5) * 1, // Small random horizontal movement
-                        dy: (Math.random() - 0.5) * 1, // Small random vertical movement
-                        color: `hsl(${Math.random() * 30 + 20}, 80%, 60%)`, // Shades of orange/gold
-                        size: size
-                    });
-                }
-            }
-            console.log(`Pond initialized with ${pondFish.length} fish.`);
-        }
-
-        // --- Pond Animation Logic ---
-        function animatePond() {
-            if (!pondCtx || pondCanvas.width === 0 || pondCanvas.height === 0) {
-                 pondAnimationFrameId = requestAnimationFrame(animatePond); // Keep trying if dimensions are zero
-                 return;
-            }
-
-            // Update fish count based on current population
-            const desiredFishCount = Math.floor(x * maxPondFish);
-            // Add or remove fish to match the desired count
-            while (pondFish.length < desiredFishCount) {
-                const size = 3 + Math.random() * 4;
-                pondFish.push({
-                    x: Math.random() * pondCanvas.width,
-                    y: Math.random() * pondCanvas.height,
-                    dx: (Math.random() - 0.5) * 1,
-                    dy: (Math.random() - 0.5) * 1,
-                    color: `hsl(${Math.random() * 30 + 20}, 80%, 60%)`,
-                    size: size
-                });
-            }
-            while (pondFish.length > desiredFishCount) {
-                pondFish.pop();
-            }
-
-            // Clear pond for redrawing
-            pondCtx.clearRect(0, 0, pondCanvas.width, pondCanvas.height);
-
-            // Move and draw each fish
-            pondFish.forEach(fish => {
-                // Update position
-                fish.x += fish.dx;
-                fish.y += fish.dy;
-
-                // Bounce off walls (with a slight buffer to prevent getting stuck on edge)
-                const buffer = fish.size;
-                if (fish.x < buffer || fish.x > pondCanvas.width - buffer) fish.dx *= -1;
-                if (fish.y < buffer || fish.y > pondCanvas.height - buffer) fish.dy *= -1;
-
-                // Slightly randomize direction for organic movement
-                fish.dx += (Math.random() - 0.5) * 0.1;
-                fish.dy += (Math.random() - 0.5) * 0.1;
-                fish.dx = Math.max(-1, Math.min(1, fish.dx)); // Cap speed
-                fish.dy = Math.max(-1, Math.min(1, fish.dy)); // Cap speed
-
-
-                // Draw fish (simple circle)
-                pondCtx.beginPath();
-                pondCtx.arc(fish.x, fish.y, fish.size, 0, Math.PI * 2);
-                pondCtx.fillStyle = fish.color;
-                pondCtx.fill();
-                pondCtx.strokeStyle = 'rgba(0,0,0,0.2)';
-                pondCtx.lineWidth = 1;
-                pondCtx.stroke();
-            });
-
-            // Request next animation frame
-            pondAnimationFrameId = requestAnimationFrame(animatePond);
-        }
-
-
-        // --- Event Listeners for Sliders ---
-        // Update corresponding variables and display spans when sliders are adjusted
-        growthRateSlider.addEventListener('input', () => {
-            growthRateValueSpan.textContent = growthRateSlider.value;
-            r = parseFloat(growthRateSlider.value);
-            if (!simulationInterval) { // Update current display only if simulation is not running
-                currentGrowthRateSpan.textContent = r.toFixed(2);
-            }
-            // Redraw return map as its reference parabola depends on 'r'
-            if (!simulationInterval) { // Only redraw if not actively simulating
-                drawReturnMap();
-            }
-            console.log(`Growth rate slider adjusted: ${r}`);
-        });
-
-        initialPopulationSlider.addEventListener('input', () => {
-            initialPopulationValueSpan.textContent = initialPopulationSlider.value;
-            if (!simulationInterval) { // Only update initial population if simulation is not running
-                x = parseFloat(initialPopulationSlider.value);
-                currentPopulationXSpan.textContent = x.toFixed(4);
-                populationHistory[0] = x; // Update initial history point
-                drawChart(); // Redraw chart for new initial population
-                initializePond(); // Re-initialize pond with new initial population
-                drawReturnMap(); // Redraw return map with new initial population
-            }
-            console.log(`Initial population slider adjusted: ${x}`);
-        });
-
-        randomnessFactorSlider.addEventListener('input', () => {
-            randomnessFactorValueSpan.textContent = randomnessFactorSlider.value;
-            randomnessFactor = parseFloat(randomnessFactorSlider.value);
-            console.log(`Randomness factor slider adjusted: ${randomnessFactor}`);
-        });
-
-        randomnessFrequencySlider.addEventListener('input', () => {
-            randomnessFrequencyValueSpan.textContent = randomnessFrequencySlider.value;
-            randomnessFrequency = parseFloat(randomnessFrequencySlider.value);
-            console.log(`Randomness frequency slider adjusted: ${randomnessFrequency}`);
-        });
-
-        // New Moving Average Event Listeners
-        movingAverageEnabledCheckbox.addEventListener('change', () => {
-            movingAverageEnabled = movingAverageEnabledCheckbox.checked;
-            drawChart(); // Redraw chart to show/hide moving average
-            console.log(`Moving Average Enabled: ${movingAverageEnabled}`);
-        });
-
-        movingAverageWindowSlider.addEventListener('input', () => {
-            movingAverageWindow = parseInt(movingAverageWindowSlider.value);
-            movingAverageWindowValueSpan.textContent = movingAverageWindowSlider.value;
-            drawChart(); // Redraw chart to update moving average line
-            console.log(`Moving Average Window: ${movingAverageWindow}`);
-        });
-
-
-        // --- Event Listeners for Buttons ---
-        startButton.addEventListener('click', () => {
-            console.log("Start button clicked. Attempting to start simulation.");
-            startSimulation();
-        });
-
-        stopButton.addEventListener('click', () => {
-            console.log("Stop button clicked. Attempting to stop simulation.");
-            stopSimulation();
-        });
-
-        resetButton.addEventListener('click', () => {
-            console.log("Reset button clicked. Stopping and re-initializing simulation.");
-            stopSimulation(); // Stop any running simulation first
-            initializeSimulation(); // Reset all parameters and history
-        });
-
-        // --- LLM Feature Event Listeners ---
-        getInsightButton.addEventListener('click', getPopulationInsight);
-        generateBifurcationButton.addEventListener('click', generateBifurcationDiagram); // New event listener
-
-
-        // --- Main Simulation Loop Logic ---
+        /**
+         * Runs a single step of the population simulation.
+         * Calculates the next population value based on the logistic map and applies randomness.
+         * Updates UI elements and charts.
+         */
         function runSimulationStep() {
-            // Use try-catch to log any errors within the simulation step
             try {
-                generation++; // Increment the generation counter
-                // console.log(`--- Running simulation step ${generation} ---`); // Commented for less console noise during normal run
-
-                // Store current X before calculating next X for return map
+                generation++;
+                // Store current X before calculating next X for return map. This ensures x_current and x_next
+                // in drawReturnMap correspond to a single (x_n, x_{n+1}) pair before 'x' is updated.
                 const currentXForReturnMap = x;
 
                 // 1. Logistic Map Calculation (Deterministic Chaos)
-                // The core equation: next population = r * current_population * (1 - current_population)
+                // The core equation: x_next = r * x_current * (1 - x_current)
                 let nextX = r * x * (1 - x);
-                // console.log(`  Previous x: ${x.toFixed(4)}, Growth Rate (r): ${r.toFixed(2)}`);
-                // console.log(`  Logistic map calculated nextX (before clamping/randomness): ${nextX.toFixed(4)}`);
 
-                // Clamp nextX to stay within biological bounds [0, 1]
-                // A population cannot be negative or exceed the carrying capacity (1) in this normalized model.
+                // Clamp nextX to stay within biological bounds [0, 1].
+                // This prevents the population from going negative or exceeding the carrying capacity.
                 nextX = Math.max(0, Math.min(1, nextX));
-                // console.log(`  nextX after clamping to [0, 1]: ${nextX.toFixed(4)}`);
 
                 // 2. Introduce Randomness (Stochastic Perturbation)
                 let appliedRandomEvent = false;
-                // Check if a random event should occur based on frequency
+                // Check if a random event should occur based on the randomnessFrequency probability.
                 if (Math.random() < randomnessFrequency) {
-                    // Generate a random perturbation (positive or negative) within the defined factor
+                    // Generate a random perturbation (positive or negative) within the defined randomnessFactor.
                     const perturbation = (Math.random() * 2 - 1) * randomnessFactor;
-                    nextX += perturbation; // Apply the perturbation
+                    nextX += perturbation; // Apply the perturbation to the calculated next population.
                     appliedRandomEvent = true;
-                    // console.log(`  Random event applied! Perturbation amount: ${perturbation.toFixed(4)}`);
                 }
 
-                // Clamp nextX again after potential random perturbation
+                // Clamp nextX again after potential random perturbation to ensure it stays within [0, 1].
                 nextX = Math.max(0, Math.min(1, nextX));
-                // console.log(`  Final nextX for this step (after random and clamp): ${nextX.toFixed(4)}`);
 
-                x = nextX; // Update the global current population variable
+                x = nextX; // Update the global current population variable to the newly calculated value.
 
-                // Store the current population in history, keeping only the last maxDataPoints
+                // Store the current population in history for the time series chart.
                 populationHistory.push(x);
+                // If history exceeds maxDataPoints, remove the oldest data point to maintain fixed window.
                 if (populationHistory.length > maxDataPoints) {
-                    populationHistory.shift(); // Remove the oldest data point if history is full
+                    populationHistory.shift();
                 }
 
-                updateDisplay(appliedRandomEvent); // Update UI elements with current values
-                drawChart(); // Redraw the population chart (which now includes moving average)
-                drawReturnMap(currentXForReturnMap, x); // Draw the new point on the return map
+                // Update all UI components.
+                updateDisplay(appliedRandomEvent); // Update current state numerical display.
+                drawChart(); // Redraw the population time series chart (includes moving average if enabled).
+                drawReturnMap(currentXForReturnMap, x); // Draw the new point on the return map.
 
-                // Check for extinction and stop simulation if population hits zero or very close to zero
-                if (x <= 0.001) { // Using a small threshold instead of exact 0 for floating point robustness
+                // Check for extinction condition.
+                // If population falls below a small threshold, stop the simulation.
+                if (x <= 0.001) {
                     stopSimulation();
                     displayMessage("Population Extinct!", `The goldfish population reached a negligible level (${x.toFixed(4)}) and the simulation has stopped.`);
                     console.log(`Simulation stopped: Population effectively extinct at ${x.toFixed(4)}.`);
                 }
             } catch (error) {
                 console.error("Error in runSimulationStep:", error);
-                stopSimulation(); // Stop simulation on error to prevent continuous errors
+                stopSimulation(); // Stop simulation on error to prevent continuous errors.
                 displayMessage("Simulation Error!", `An error occurred during simulation: ${error.message}. Check console for details.`);
             }
         }
 
-        // --- Start Simulation Function ---
+        /**
+         * Starts the main simulation loop.
+         * The Bifurcation Diagram generation is now explicitly triggered by its own button.
+         */
         function startSimulation() {
-            console.log("startSimulation function invoked.");
-            if (simulationInterval) {
-                console.log("Simulation already running. Ignoring start request.");
-                return; // Prevent starting multiple intervals
+            console.log("startSimulation function invoked (triggered by button click).");
+            console.log(`Current simulationInterval ID on start click: ${simulationInterval}`);
+
+            if (simulationInterval !== null) {
+                console.log("Simulation already running. Ignoring start request to prevent multiple intervals.");
+                return;
             }
-            // Disable start button and enable stop button
+
+            // Disable Start button and enable Stop button immediately.
             startButton.disabled = true;
             stopButton.disabled = false;
-            // Start the recurring simulation step
-            // Wrap setInterval in a try-catch to catch immediate errors
+            getInsightButton.disabled = false; // LLM button remains active
+            generateBifurcationButton.disabled = false; // Bifurcation button remains active
+
+            console.log("Buttons state: Start disabled, Stop enabled, AI & Bifurcation enabled.");
+
+            // Set up the recurring interval for running simulation steps.
             try {
-                simulationInterval = setInterval(runSimulationStep, 100); // Run every 100 milliseconds
-                console.log("Simulation interval successfully started.");
+                simulationInterval = setInterval(runSimulationStep, 100); // Calls runSimulationStep every 100ms.
+                console.log(`Main simulation interval successfully started. New interval ID: ${simulationInterval}`);
             } catch (error) {
-                console.error("Error starting simulation interval:", error);
-                displayMessage("Start Error!", `Could not start simulation: ${error.message}.`);
-                startButton.disabled = false; // Re-enable start button on error
+                console.error("Error setting up main simulation interval:", error);
+                displayMessage("Start Error!", `Could not start main simulation: ${error.message}.`);
+                // Restore button states if an error occurs during interval setup.
+                startButton.disabled = false;
                 stopButton.disabled = true;
+                getInsightButton.disabled = false;
+                generateBifurcationButton.disabled = false;
+                console.log("Buttons state after interval setup error: Start enabled, Stop disabled, AI & Bifurcation enabled.");
             }
         }
 
-        // --- Stop Simulation Function ---
+        /**
+         * Stops the currently running simulation loop and associated animations.
+         */
         function stopSimulation() {
-            console.log("stopSimulation function invoked.");
-            if (simulationInterval) { // Only try to clear if an interval exists
-                clearInterval(simulationInterval); // Clear the interval to stop the simulation loop
-                simulationInterval = null; // Reset the interval ID
-                console.log("Simulation interval cleared.");
-            }
-            // Re-enable start button and disable stop button
-            startButton.disabled = false;
-            stopButton.disabled = true;
+            console.log(`stopSimulation function invoked. simulationInterval before clearing: ${simulationInterval}`);
 
-            // Also stop the pond animation when the main simulation stops
+            // Clear the main simulation interval if it's active.
+            if (simulationInterval !== null) {
+                clearInterval(simulationInterval);
+                simulationInterval = null; // Reset the interval ID.
+                console.log(`Simulation interval cleared. simulationInterval is now: ${simulationInterval}`);
+            } else {
+                console.log("No simulation interval was active to clear.");
+            }
+
+            // Update button states after stopping the simulation.
+            startButton.disabled = false; // Enable start button.
+            stopButton.disabled = true; // Disable stop button.
+            getInsightButton.disabled = false; // Ensure AI Insight button is enabled.
+            generateBifurcationButton.disabled = false; // Ensure Bifurcation button is enabled.
+            console.log("Buttons state: Start enabled, Stop disabled, AI & Bifurcation enabled.");
+
+            // Stop the pond animation requestFrame loop if it's active.
             if (pondAnimationFrameId) {
                 cancelAnimationFrame(pondAnimationFrameId);
-                pondAnimationFrameId = null;
+                pondAnimationFrameId = null; // Reset the animation frame ID.
                 console.log("Pond animation frame canceled.");
             }
         }
 
-        // --- UI Display Update Function ---
+
+        // === 4. UI Update Functions ===
+
+        /**
+         * Updates the numerical display elements in the "Current State" panel.
+         * @param {boolean} randomEvent - True if a random event was applied in the last step.
+         */
         function updateDisplay(randomEvent = false) {
             currentGenerationSpan.textContent = generation;
             currentPopulationXSpan.textContent = x.toFixed(4); // Display population with 4 decimal places
@@ -892,58 +751,55 @@
             randomEventAppliedSpan.style.color = randomEvent ? '#dc3545' : '#28a745'; // Color coding for random event
         }
 
-        // --- Chart Drawing Function (for population history) ---
+        /**
+         * Draws the population time series chart.
+         * Includes the main population line and an optional moving average line.
+         */
         function drawChart() {
-            // Check if context is available before drawing
             if (!populationChartCtx) {
                 console.error("Population Chart Canvas 2D context is not available for drawing. Cannot draw chart.");
                 return;
             }
-            populationChartCtx.clearRect(0, 0, populationChartCanvas.width, populationChartCanvas.height); // Clear the entire canvas for redrawing
+            populationChartCtx.clearRect(0, 0, populationChartCanvas.width, populationChartCanvas.height); // Clear the entire canvas
 
-            // Define graph margins/paddings
+            // Define graph margins/paddings for consistent layout
             const padding = 50;
             const chartWidth = populationChartCanvas.width - padding;
             const chartHeight = populationChartCanvas.height - padding;
 
-            // Draw axes
+            // Draw X and Y axes
             populationChartCtx.beginPath();
             populationChartCtx.strokeStyle = '#999';
             populationChartCtx.lineWidth = 1;
-            // Y-axis (population from 0 to 1)
-            populationChartCtx.moveTo(padding, 0);
-            populationChartCtx.lineTo(padding, chartHeight);
-            // X-axis (generations)
-            populationChartCtx.moveTo(padding, chartHeight);
-            populationChartCtx.lineTo(populationChartCanvas.width, chartHeight);
+            populationChartCtx.moveTo(padding, 0); populationChartCtx.lineTo(padding, chartHeight); // Y-axis (Population)
+            populationChartCtx.moveTo(padding, chartHeight); populationChartCtx.lineTo(populationChartCanvas.width, chartHeight); // X-axis (Generations)
             populationChartCtx.stroke();
 
-            // Y-axis labels
+            // Draw Y-axis labels (Population values)
             populationChartCtx.fillStyle = '#555';
             populationChartCtx.font = '12px Arial';
             populationChartCtx.textAlign = 'right';
-            populationChartCtx.textBaseline = 'middle'; // Align text vertically in the middle
-            populationChartCtx.fillText('1.0', padding - 10, 0 + 10); // Top (Population 1.0)
-            populationChartCtx.fillText('0.5', padding - 10, chartHeight / 2); // Middle (Population 0.5)
-            populationChartCtx.fillText('0.0', padding - 10, chartHeight - 5); // Bottom (Population 0.0)
+            populationChartCtx.textBaseline = 'middle';
+            populationChartCtx.fillText('1.0', padding - 10, 0 + 10);
+            populationChartCtx.fillText('0.5', padding - 10, chartHeight / 2);
+            populationChartCtx.fillText('0.0', padding - 10, chartHeight - 5);
 
-            // X-axis label
+            // Draw X-axis label (Generations)
             populationChartCtx.textAlign = 'center';
-            populationChartCtx.textBaseline = 'top'; // Align text vertically at the top
+            populationChartCtx.textBaseline = 'top';
             populationChartCtx.fillText('Generations', padding + chartWidth / 2, chartHeight + 10);
 
-
-            // Draw population line
+            // Draw the main population line
             populationChartCtx.beginPath();
-            populationChartCtx.strokeStyle = '#007bff'; // Blue line for population
+            populationChartCtx.strokeStyle = '#007bff'; // Blue color
             populationChartCtx.lineWidth = 2;
 
             // Calculate horizontal step for each data point
             const stepX = chartWidth / (maxDataPoints - 1);
 
-            if (populationHistory.length > 0) { // Only draw if there's history
+            if (populationHistory.length > 0) {
                 populationHistory.forEach((pop, index) => {
-                    // Calculate plot coordinates, inverting Y for canvas (0,0 is top-left)
+                    // Map normalized population (0-1) to canvas Y-coordinate (inverted)
                     const plotX = padding + (index * stepX);
                     const plotY = chartHeight - (pop * chartHeight);
 
@@ -955,27 +811,27 @@
                 });
                 populationChartCtx.stroke();
 
-                // Draw the current population point (a red dot at the end of the line)
+                // Draw a red dot for the current (latest) population point
                 populationChartCtx.beginPath();
-                populationChartCtx.fillStyle = '#dc3545'; // Red color for the current point
-                // Get the last population value from history
+                populationChartCtx.fillStyle = '#dc3545';
                 const currentPop = populationHistory[populationHistory.length - 1];
-                // Calculate its position on the graph
                 const currentPlotX = padding + (populationHistory.length - 1) * stepX;
                 const currentPlotY = chartHeight - (currentPop * chartHeight);
-                populationChartCtx.arc(currentPlotX, currentPlotY, 4, 0, Math.PI * 2); // Draw a circle
+                populationChartCtx.arc(currentPlotX, currentPlotY, 4, 0, Math.PI * 2);
                 populationChartCtx.fill();
             }
 
-            // Draw Moving Average Line if enabled and enough data points exist
+            // Draw Moving Average Line if enabled and enough data points exist for the window
             if (movingAverageEnabled && populationHistory.length >= movingAverageWindow) {
                 populationChartCtx.beginPath();
-                populationChartCtx.strokeStyle = '#000000'; // Black for moving average
+                populationChartCtx.strokeStyle = '#000000'; // Black color for moving average
                 populationChartCtx.lineWidth = 2;
-                populationChartCtx.setLineDash([5, 5]); // Dashed line
+                populationChartCtx.setLineDash([5, 5]); // Dashed line for distinction
 
+                // Iterate from the point where the moving average window is full
                 for (let i = movingAverageWindow - 1; i < populationHistory.length; i++) {
                     let sum = 0;
+                    // Sum up values within the current window
                     for (let j = 0; j < movingAverageWindow; j++) {
                         sum += populationHistory[i - j];
                     }
@@ -991,11 +847,16 @@
                     }
                 }
                 populationChartCtx.stroke();
-                populationChartCtx.setLineDash([]); // Reset line dash
+                populationChartCtx.setLineDash([]); // Reset line dash to solid for subsequent drawings
             }
         }
 
-        // --- Draw Return Map Function ---
+        /**
+         * Draws the Phase Space Plot (Return Map).
+         * Plots x_n (current population) against x_{n+1} (next population).
+         * @param {number} [x_current] - The population value at the current step ($x_n$).
+         * @param {number} [x_next] - The population value at the next step ($x_{n+1}$).
+         */
         function drawReturnMap(x_current, x_next) {
             if (!returnMapCtx) {
                 console.error("Return Map Canvas 2D context is not available for drawing.");
@@ -1006,18 +867,18 @@
             const mapWidth = returnMapCanvas.width - padding;
             const mapHeight = returnMapCanvas.height - padding;
 
-            // Clear only if it's the first point, or reset
-            if (generation === 0) { // Clear on initial load or full reset
-                 returnMapCtx.clearRect(0, 0, returnMapCanvas.width, returnMapCanvas.height); // Clear entire canvas on reset
-                 // Draw axes and reference line on reset
+            // Clear and redraw axes/reference lines only on initialization (generation 0)
+            if (generation === 0) {
+                 returnMapCtx.clearRect(0, 0, returnMapCanvas.width, returnMapCanvas.height); // Clear entire canvas
+                 // Draw X and Y axes
                  returnMapCtx.beginPath();
                  returnMapCtx.strokeStyle = '#999';
                  returnMapCtx.lineWidth = 1;
-                 returnMapCtx.moveTo(padding, 0); returnMapCtx.lineTo(padding, mapHeight); // Y-axis
-                 returnMapCtx.moveTo(padding, mapHeight); returnMapCtx.lineTo(returnMapCanvas.width, mapHeight); // X-axis
+                 returnMapCtx.moveTo(padding, 0); returnMapCtx.lineTo(padding, mapHeight); // Y-axis ($x_{n+1}$)
+                 returnMapCtx.moveTo(padding, mapHeight); returnMapCtx.lineTo(returnMapCanvas.width, mapHeight); // X-axis ($x_n$)
                  returnMapCtx.stroke();
 
-                 // Labels
+                 // Axis Labels
                  returnMapCtx.fillStyle = '#555';
                  returnMapCtx.font = '12px Arial';
                  returnMapCtx.textAlign = 'right';
@@ -1028,29 +889,29 @@
                  returnMapCtx.textAlign = 'center';
                  returnMapCtx.textBaseline = 'top';
                  returnMapCtx.fillText('Current Population ($x_n$)', padding + mapWidth / 2, mapHeight + 10);
-                 returnMapCtx.save(); // Save context state before rotation
+                 returnMapCtx.save(); // Save context state before rotating for Y-axis label
                  returnMapCtx.translate(padding - 30, mapHeight / 2);
                  returnMapCtx.rotate(-Math.PI / 2);
                  returnMapCtx.fillText('Next Population ($x_{n+1}$)', 0, 0);
                  returnMapCtx.restore(); // Restore context to original state
 
-                 // Draw the y=x diagonal line
+                 // Draw the y=x diagonal line (stability line)
                  returnMapCtx.beginPath();
                  returnMapCtx.strokeStyle = 'rgba(0, 0, 255, 0.3)'; // Light blue
                  returnMapCtx.lineWidth = 1;
-                 returnMapCtx.moveTo(padding, mapHeight);
-                 returnMapCtx.lineTo(returnMapCanvas.width, 0);
+                 returnMapCtx.moveTo(padding, mapHeight); // From (0,0) of graph area
+                 returnMapCtx.lineTo(returnMapCanvas.width, 0); // To (1,1) of graph area
                  returnMapCtx.stroke();
 
-                 // Draw the logistic map parabola for reference
+                 // Draw the logistic map parabola (the deterministic rule) for reference
                  returnMapCtx.beginPath();
                  returnMapCtx.strokeStyle = 'rgba(128, 0, 128, 0.5)'; // Purple for the curve
                  returnMapCtx.lineWidth = 1;
                  for (let i = 0; i <= 100; i++) {
-                     const px = i / 100; // x_n
-                     const py = r * px * (1 - px); // x_{n+1}
-                     const plotX = padding + px * mapWidth;
-                     const plotY = mapHeight - py * mapHeight;
+                     const px = i / 100; // Normalized x_n from 0 to 1
+                     const py = r * px * (1 - px); // Corresponding x_{n+1} calculated by logistic map
+                     const plotX = padding + px * mapWidth; // Map to canvas X coord
+                     const plotY = mapHeight - py * mapHeight; // Map to canvas Y coord (inverted)
                      if (i === 0) {
                          returnMapCtx.moveTo(plotX, plotY);
                      } else {
@@ -1060,20 +921,22 @@
                  returnMapCtx.stroke();
             }
 
-
-            // Draw the current point (x_current, x_next)
+            // Draw the current point (x_current, x_next) if values are provided
             if (generation > 0 && x_current !== undefined && x_next !== undefined) {
                 const plotX = padding + x_current * mapWidth;
                 const plotY = mapHeight - x_next * mapHeight; // Y-axis inverted for drawing
 
                 returnMapCtx.beginPath();
-                returnMapCtx.arc(plotX, plotY, 3, 0, Math.PI * 2); // Small dot
-                returnMapCtx.fillStyle = '#007bff'; // Blue dot
+                returnMapCtx.arc(plotX, plotY, 3, 0, Math.PI * 2); // Draw a small dot
+                returnMapCtx.fillStyle = '#007bff'; // Blue dot for current position
                 returnMapCtx.fill();
             }
         }
 
-        // --- Draw Bifurcation Map (Initial State) Function ---
+        /**
+         * Initializes the Bifurcation Diagram canvas with axes and a placeholder message.
+         * This is drawn on initial load or reset.
+         */
         function drawBifurcationMapInitialState() {
             if (!bifurcationMapCtx) {
                 console.error("Bifurcation Map Canvas 2D context is not available for drawing.");
@@ -1083,17 +946,17 @@
 
             const padding = 50;
             const chartWidth = bifurcationMapCanvas.width - padding;
-            const chartHeight = bifurcationMapCanvas.height - padding;
+            const chartHeight = bifurcationMapCanvas.height - padding; // Corrected: Used bifurcationMapCanvas.height
 
-            // Draw axes
+            // Draw X and Y axes
             bifurcationMapCtx.beginPath();
             bifurcationMapCtx.strokeStyle = '#999';
             bifurcationMapCtx.lineWidth = 1;
-            bifurcationMapCtx.moveTo(padding, 0); bifurcationMapCtx.lineTo(padding, chartHeight); // Y-axis
-            bifurcationMapCtx.moveTo(padding, chartHeight); bifurcationMapCtx.lineTo(bifurcationMapCanvas.width, chartHeight); // X-axis
+            bifurcationMapCtx.moveTo(padding, 0); bifurcationMapCtx.lineTo(padding, chartHeight); // Y-axis (Population)
+            bifurcationMapCtx.moveTo(padding, chartHeight); bifurcationMapCtx.lineTo(bifurcationMapCanvas.width, chartHeight); // X-axis (Growth Rate 'r')
             bifurcationMapCtx.stroke();
 
-            // Labels
+            // Axis Labels
             bifurcationMapCtx.fillStyle = '#555';
             bifurcationMapCtx.font = '12px Arial';
             bifurcationMapCtx.textAlign = 'right';
@@ -1104,19 +967,23 @@
             bifurcationMapCtx.textAlign = 'center';
             bifurcationMapCtx.textBaseline = 'top';
             bifurcationMapCtx.fillText('Growth Rate (r)', padding + chartWidth / 2, chartHeight + 10);
-            bifurcationMapCtx.save();
+            bifurcationMapCtx.save(); // Save context state before rotating for Y-axis label
             bifurcationMapCtx.translate(padding - 30, chartHeight / 2);
             bifurcationMapCtx.rotate(-Math.PI / 2);
             bifurcationMapCtx.fillText('Long-Term Population (x)', 0, 0);
-            bifurcationMapCtx.restore();
+            bifurcationMapCtx.restore(); // Restore context to original state
 
+            // Placeholder message while diagram is not generated
             bifurcationMapCtx.fillStyle = '#666';
             bifurcationMapCtx.textAlign = 'center';
             bifurcationMapCtx.textBaseline = 'middle';
             bifurcationMapCtx.fillText('Click "Generate Bifurcation Diagram" to plot', bifurcationMapCanvas.width / 2, bifurcationMapCanvas.height / 2);
         }
 
-        // --- Generate Bifurcation Diagram Function ---
+        /**
+         * Generates and plots the Bifurcation Diagram for the logistic map.
+         * This function can be computationally intensive as it runs many simulations.
+         */
         async function generateBifurcationDiagram() {
             if (!bifurcationMapCtx) {
                 console.error("Bifurcation Map Canvas 2D context is not available for drawing.");
@@ -1180,48 +1047,126 @@
         }
 
 
-        // --- Custom Message Box Function (to replace native alert() for better UI) ---
+        // === 5. Pond Animation Functions ===
+
+        /**
+         * Initializes the array of fish objects for the pond animation.
+         * Fish properties include position, movement vector, color, and size.
+         */
+        function initializePond() {
+            pondFish = []; // Clear any existing fish
+            const currentFishCount = Math.floor(x * maxPondFish); // Determine number of fish based on normalized population
+
+            // Ensure canvas dimensions are valid before creating fish positions
+            if (pondCanvas && pondCanvas.width > 0 && pondCanvas.height > 0) {
+                for (let i = 0; i < currentFishCount; i++) {
+                    const size = 3 + Math.random() * 4; // Random size for visual variety
+                    pondFish.push({
+                        x: Math.random() * pondCanvas.width, // Random X position within pond
+                        y: Math.random() * pondCanvas.height, // Random Y position within pond
+                        dx: (Math.random() - 0.5) * 1, // Small random horizontal velocity
+                        dy: (Math.random() - 0.5) * 1, // Small random vertical velocity
+                        color: `hsl(${Math.random() * 30 + 20}, 80%, 60%)`, // Shades of orange/gold
+                        size: size
+                    });
+                }
+            }
+            console.log(`Pond initialized with ${pondFish.length} fish.`);
+        }
+
+        /**
+         * The main animation loop for the pond.
+         * Updates fish positions, manages fish count, and redraws them.
+         */
+        function animatePond() {
+            // Stop if canvas context is not available or dimensions are zero (e.g., initially hidden)
+            if (!pondCtx || pondCanvas.width === 0 || pondCanvas.height === 0) {
+                 pondAnimationFrameId = requestAnimationFrame(animatePond); // Keep trying to animate if not ready
+                 return;
+            }
+
+            // Adjust the number of visual fish to match the current simulated population
+            const desiredFishCount = Math.floor(x * maxPondFish);
+            while (pondFish.length < desiredFishCount) {
+                // Add new fish with random properties if population increases
+                const size = 3 + Math.random() * 4;
+                pondFish.push({
+                    x: Math.random() * pondCanvas.width,
+                    y: Math.random() * pondCanvas.height,
+                    dx: (Math.random() - 0.5) * 1,
+                    dy: (Math.random() - 0.5) * 1,
+                    color: `hsl(${Math.random() * 30 + 20}, 80%, 60%)`,
+                    size: size
+                });
+            }
+            while (pondFish.length > desiredFishCount) {
+                pondFish.pop(); // Remove fish from the end if population decreases
+            }
+
+            pondCtx.clearRect(0, 0, pondCanvas.width, pondCanvas.height); // Clear the entire pond canvas for redrawing
+
+            // Update position and redraw each fish
+            pondFish.forEach(fish => {
+                fish.x += fish.dx;
+                fish.y += fish.dy;
+
+                // Simple collision/bounce logic for pond boundaries
+                const buffer = fish.size; // Use fish size as a buffer
+                if (fish.x < buffer || fish.x > pondCanvas.width - buffer) fish.dx *= -1;
+                if (fish.y < buffer || fish.y > pondCanvas.height - buffer) fish.dy *= -1;
+
+                // Introduce slight random changes to direction for more natural movement
+                fish.dx += (Math.random() - 0.5) * 0.1;
+                fish.dy += (Math.random() - 0.5) * 0.1;
+                // Cap speed to prevent fish from moving too fast
+                fish.dx = Math.max(-1, Math.min(1, fish.dx));
+                fish.dy = Math.max(-1, Math.min(1, fish.dy));
+
+                // Draw each fish as a simple colored circle
+                pondCtx.beginPath();
+                pondCtx.arc(fish.x, fish.y, fish.size, 0, Math.PI * 2);
+                pondCtx.fillStyle = fish.color;
+                pondCtx.fill();
+                pondCtx.strokeStyle = 'rgba(0,0,0,0.2)'; // Small black border
+                pondCtx.lineWidth = 1;
+                pondCtx.stroke();
+            });
+
+            // Request the next animation frame for a smooth loop
+            pondAnimationFrameId = requestAnimationFrame(animatePond);
+        }
+
+
+        // === 6. Utility and LLM Integration Functions ===
+
+        /**
+         * Displays a custom message box instead of native alert().
+         * Supports a loading state with a spinner.
+         * @param {string} title - Title of the message box.
+         * @param {string} message - Content of the message. Use 'loading' for spinner.
+         */
         function displayMessage(title, message) {
             let messageBox = document.getElementById('messageBox');
             if (!messageBox) {
+                // Create message box element if it doesn't exist
                 messageBox = document.createElement('div');
                 messageBox.id = 'messageBox';
                 messageBox.style.cssText = `
-                    position: fixed;
-                    top: 50%;
-                    left: 50%;
-                    transform: translate(-50%, -50%);
-                    background-color: #fff;
-                    padding: 30px;
-                    border-radius: 10px;
-                    box-shadow: 0 5px 15px rgba(0,0,0,0.3);
-                    z-index: 1000;
-                    text-align: center;
-                    max-width: 400px;
-                    width: 90%;
-                    animation: fadeIn 0.3s ease-out;
+                    position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+                    background-color: #fff; padding: 30px; border-radius: 10px;
+                    box-shadow: 0 5px 15px rgba(0,0,0,0.3); z-index: 1000; text-align: center;
+                    max-width: 400px; width: 90%; animation: fadeIn 0.3s ease-out; display: none;
                 `;
                 document.body.appendChild(messageBox);
 
+                // Add CSS keyframes for fade animations to document head
                 const style = document.createElement('style');
                 style.innerHTML = `
-                    @keyframes fadeIn {
-                        from { opacity: 0; transform: translate(-50%, -60%); }
-                        to { opacity: 1; transform: translate(-50%, -50%); }
-                    }
-                    @keyframes fadeOut {
-                        from { opacity: 1; transform: translate(-50%, -50%); }
-                        to { opacity: 0; transform: translate(-50%, -60%); }
-                    }
+                    @keyframes fadeIn { from { opacity: 0; transform: translate(-50%, -60%); } to { opacity: 1; transform: translate(-50%, -50%); } }
+                    @keyframes fadeOut { from { opacity: 1; transform: translate(-50%, -50%); } to { opacity: 0; transform: translate(-50%, -60%); } }
                     .message-box-overlay {
-                        position: fixed;
-                        top: 0;
-                        left: 0;
-                        width: 100%;
-                        height: 100%;
-                        background: rgba(0,0,0,0.5);
-                        z-index: 999;
-                        animation: fadeIn 0.3s ease-out;
+                        position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+                        background: rgba(0,0,0,0.5); z-index: 999; animation: fadeIn 0.3s ease-out; display: none;
                     }
                 `;
                 document.head.appendChild(style);
@@ -1229,16 +1174,16 @@
 
             let overlay = document.getElementById('messageBoxOverlay');
             if (!overlay) {
+                // Create overlay element if it doesn't exist
                 overlay = document.createElement('div');
                 overlay.id = 'messageBoxOverlay';
                 overlay.className = 'message-box-overlay';
                 document.body.appendChild(overlay);
             }
 
-            // Check if message is 'loading', if so, add spinner
             const is_loading = message === 'loading';
             const loading_content = is_loading ? '<div class="loading-spinner"></div> Loading...' : '';
-            const message_text = is_loading ? '' : message; // If loading, message text is empty
+            const message_text = is_loading ? '' : message;
 
             messageBox.innerHTML = `
                 <h3 style="color: #007bff; margin-bottom: 15px;">${title}</h3>
@@ -1249,6 +1194,7 @@
             overlay.style.display = 'block';
 
             if (!is_loading) {
+                // Set up click handler for OK button to close the message box
                 document.getElementById('closeMessageBox').onclick = () => {
                     messageBox.style.animation = 'fadeOut 0.3s ease-out forwards';
                     overlay.style.animation = 'fadeOut 0.3s ease-out forwards';
@@ -1260,7 +1206,9 @@
             }
         }
 
-        // --- Function to hide the message box
+        /**
+         * Hides the custom message box and its overlay.
+         */
         function hideMessageBox() {
             const messageBox = document.getElementById('messageBox');
             const overlay = document.getElementById('messageBoxOverlay');
@@ -1268,27 +1216,31 @@
             if (overlay) overlay.style.display = 'none';
         }
 
-
-        // --- LLM Integration Functions ---
-
+        /**
+         * Calls the Gemini API to generate text based on a given prompt.
+         * Handles loading state and error reporting.
+         * @param {string} prompt - The text prompt to send to the LLM.
+         * @param {string} outputTitle - The title to display for the LLM output.
+         * @returns {Promise<string>} - A promise that resolves with the generated text or an.
+         */
         async function callGeminiAPI(prompt, outputTitle) {
             llmOutputArea.style.display = 'block'; // Ensure the LLM output area is visible
-            llmOutputTitle.textContent = outputTitle; // Set the title (e.g., "Population Insight:")
-            llmOutputText.innerHTML = '<div class="loading-spinner"></div> Generating...'; // Show loading spinner
-            // Disable LLM buttons while API call is in progress
+            llmOutputTitle.textContent = outputTitle; // Set the title for the LLM output
+            llmOutputText.innerHTML = '<div class="loading-spinner"></div> Generating...'; // Show loading spinner within the output area
+
+            // Disable LLM-related buttons during the API call
             getInsightButton.disabled = true;
-            generateBifurcationButton.disabled = true;
+            generateBifurcationButton.disabled = true; // This button is visible, so disable it
 
             console.log("Calling Gemini API with prompt:", prompt);
 
-            let chatHistory = [];
-            chatHistory.push({ role: "user", parts: [{ text: prompt }] });
+            const chatHistory = [{ role: "user", parts: [{ text: prompt }] }];
             const payload = { contents: chatHistory };
-            const apiKey = "AIzaSyBe4FaOSzP9GaqTpcvW8lV-wKRu9nH82sA"; // Canvas will provide this at runtime
+            const apiKey = "AIzaSyBe4FaOSzP9GaqTpcvW8lV-wKRu9nH82sA"; // Canvas will provide this API key at runtime
 
             const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
 
-            let generatedText = "Error: Could not get response.";
+            let generatedText = "Error: Could not retrieve response.";
             try {
                 const response = await fetch(apiUrl, {
                     method: 'POST',
@@ -1297,6 +1249,7 @@
                 });
 
                 if (!response.ok) {
+                    // If response is not OK (e.g., 4xx, 5xx), parse error details
                     const errorData = await response.json();
                     throw new Error(`API error: ${response.status} ${response.statusText} - ${JSON.stringify(errorData)}`);
                 }
@@ -1304,6 +1257,7 @@
                 const result = await response.json();
                 console.log("Gemini API response:", result);
 
+                // Extract generated text from the response structure
                 if (result.candidates && result.candidates.length > 0 &&
                     result.candidates[0].content && result.candidates[0].content.parts &&
                     result.candidates[0].content.parts.length > 0) {
@@ -1316,15 +1270,20 @@
                 console.error("Error calling Gemini API:", error);
                 generatedText = `Error generating response: ${error.message}`;
             } finally {
-                // Update the text content after generation (or error)
+                // Update the LLM output text area with the generated text (or error message)
                 llmOutputText.textContent = generatedText;
-                // Re-enable LLM buttons
+                // Re-enable LLM-related buttons
                 getInsightButton.disabled = false;
                 generateBifurcationButton.disabled = false;
             }
         }
 
+        /**
+         * Gathers current simulation data and parameters,
+         * then constructs a detailed prompt for the LLM to generate insights.
+         */
         async function getPopulationInsight() {
+            // Determine population behavior description based on 'r' value
             let r_behavior_description = "";
             let chaos_explanation_specific = "";
             let return_map_explanation = "";
@@ -1348,6 +1307,7 @@
                 return_map_explanation = "Despite the seemingly random behavior in the time series chart, the Return Map remains a powerful tool. It will clearly show that *all* generated points still fall precisely on the parabolic curve of the logistic map. This emphatically highlights the deterministic nature of chaos; the system follows an exact rule. However, instead of clustering into fixed points or simple cycles, the points will fill a continuous segment of the parabola, demonstrating the system's unbounded yet structured unpredictability. Randomness will cause these points to scatter slightly *off* the perfect parabolic line, visually indicating how external noise perturbs the underlying deterministic chaotic system. The dense, irregular spread of points across the parabola, rather than converging, is a visual signature of the chaotic 'attractor.'";
             }
 
+            // Determine current population trend
             let x_trend_description = "";
             const lastX = populationHistory[populationHistory.length - 1];
             if (generation > 1 && populationHistory.length > 1) {
@@ -1363,66 +1323,73 @@
                 x_trend_description = "The simulation has just started or reset, and the initial trend is being established.";
             }
 
+            // Describe the effect of randomness
             const randomness_effect = `The 'Randomness Factor' (currently ${randomnessFactor.toFixed(3)}) and 'Randomness Frequency' (currently ${randomnessFrequency.toFixed(2)}) introduce external, unpredictable disturbances to the pond environment. These mimic real-world events, like sudden environmental shifts (e.g., a cold snap, a burst of algae growth) or individual biological events (e.g., a few fish falling sick, an unrecorded predator visit). This randomness further influences the population's path, especially in chaotic regimes where small perturbations have amplified effects, making the system even harder to predict precisely.`;
 
             // Explanation of fish population
             const fish_population_explanation = `In this simulation, the 'population (x)' represents the goldfish population as a normalized value between 0 and 1. '0' signifies extinction (no fish in the pond), while '1' represents the maximum carrying capacity of the pond (the largest population the environment can sustainably support, given resources). This normalization allows us to focus on the proportional changes and dynamics of the population relative to its environmental limits, simplifying the complexity of tracking exact large numbers of individual fish while still illustrating fundamental ecological principles.`;
 
-            // Explanation of Bifurcation Diagram (to be added)
-            const bifurcation_diagram_explanation = "The Bifurcation Diagram (which can be generated by clicking its button) provides a global view of the system's long-term behavior across the entire range of 'r' values. It visually demonstrates the transition from stable population sizes to predictable oscillations (period doubling) and then into the dense, unpredictable regions characteristic of chaos. This diagram is crucial for seeing the 'road to chaos' and understanding how sensitive the system's overall behavior is to changes in its growth rate 'r'.";
+            // Detailed explanation of the Bifurcation Diagram
+            const bifurcation_diagram_explanation_in_detail = "The Bifurcation Diagram provides a global view of the system's long-term behavior across the entire range of 'r' values. This diagram vividly illustrates the 'road to chaos,' showing how the goldfish population transitions from a single stable size (a single line) to predictable oscillations (period doubling, appearing as branching lines) and then abruptly into dense, unpredictable regions (filled bands) characteristic of chaos. Each point in the diagram represents a possible long-term population value for a given 'r'. This visual is crucial for understanding how qualitatively different behaviors emerge as 'r' changes, highlighting the system's inherent sensitivity and the fundamental principles of chaos theory across its full dynamic range.";
 
-
+            // Construct the comprehensive prompt for the LLM
             const insightPrompt = `This simulation models goldfish population dynamics using the logistic map (P_next = r * P * (1 - P)) and incorporates random perturbations. It visually demonstrates the **Butterfly Effect** and the principles of chaos theory.
 
             - **Understanding the Goldfish Population (x):** ${fish_population_explanation}
             - **Population Behavior (based on r=${r.toFixed(2)}):** ${r_behavior_description}
             - **Current Trend:** ${x_trend_description}
-            - **Chaos Theory & The Butterfly Effect in the Pond:** This simulation vividly exemplifies how even simple, deterministic rules can lead to profound long-term unpredictability in the goldfish population. For 'r' values in the chaotic range, a minute, unmeasurable difference in the initial goldfish population, or a tiny random event (like a single extra mosquito larva for food or an unexpected mild day), will cause the entire population trajectory to diverge wildly and unpredictably over time. This is the core of the 'butterfly effect' – where small, seemingly insignificant causes lead to large, unforeseen differences in the pond's fish numbers. The system is inherently deterministic, following the logistic map, yet its long-term state is practically unknowable.
+            - **Chaos Theory & The Butterfly Effect in the Pond:** This simulation vividly exemplifies how even simple, deterministic rules can lead to profound long-term unpredictability in the goldfish population. For 'r' values in the chaotic range, a minute, unmeasurable difference in the initial goldfish population, or a tiny random event (like a single extra mosquito larva for food or an unexpected mild day), will cause the entire population trajectory to diverge wildly and unpredictably over time. This is the core of the 'butterfly effect' – where small, seemingly insignificant causes lead to large, unforeseen differences in the pond's fish numbers. The system is inherently deterministic, following the logistic map, yet its long-term state is practically unknowable. **The Bifurcation Diagram provides a global view of this phenomenon, visually demonstrating the transitions from stable points to period-doubling oscillations, and eventually to the dense, unpredictable regions characteristic of chaos as the 'r' value increases, showcasing the underlying structure of chaos itself.**
             - **Visualizing Chaos with the Return Map:** The Phase Space Plot (Return Map) is a crucial tool for understanding this. It plots the current population ($x_n$) against the next ($x_{n+1}$). It always shows points on the parabolic curve derived from the logistic map, confirming the deterministic rule. However, in chaotic regimes, instead of settling into fixed points or simple cycles, the points densely fill a section of the parabola, showcasing the 'strange attractor' and the system's bounded yet unpredictable nature. Randomness causes points to scatter slightly *off* this perfect curve, representing external disturbances.
-            - **Global View: The Bifurcation Diagram:** ${bifurcation_diagram_explanation}
             - **Impact of Randomness:** ${randomness_effect}
 
             Provide a comprehensive, concise analysis explaining how these elements interact to produce the observed simulation results, focusing on the manifestation of the butterfly effect and the role of both chaos and randomness in the goldfish population. Keep the explanation to about 10-15 sentences.`;
 
-
+            // Call the Gemini API with the constructed prompt
             callGeminiAPI(insightPrompt, "Population Model & Results Insight:");
         }
 
 
-        // --- Initial Setup Call ---
-        // This ensures the simulation state and chart are drawn as soon as the script loads.
-        // It's crucial to call this after the DOM is fully loaded, so we'll use window.onload.
+        // === 7. Initial Setup and Event Listeners ===
+
+        /**
+         * This function is called once the entire window (including all HTML elements) has loaded.
+         * It initializes the simulation and sets up global event listeners.
+         */
         window.onload = function() {
-            initializeSimulation();
+            initializeSimulation(); // Perform initial setup of the simulation and UI
             console.log("Script loaded and initial simulation state set. Ready to start.");
 
-            // Add a resize listener for the canvases to ensure responsiveness
+            // Add a resize listener to ensure all canvases are responsive
             window.addEventListener('resize', () => {
+                // Adjust pond canvas dimensions
                 if (pondCanvas) {
                     const container = pondCanvas.parentElement;
                     pondCanvas.width = container.clientWidth;
                     pondCanvas.height = container.clientHeight;
                 }
+                // Adjust population chart canvas dimensions, maintaining aspect ratio
                 if (populationChartCanvas) {
                     const container = populationChartCanvas.parentElement;
                     populationChartCanvas.width = container.clientWidth;
-                    populationChartCanvas.height = container.clientWidth * (400/800); // Maintain aspect ratio
+                    populationChartCanvas.height = container.clientWidth * (400/800);
                 }
+                // Adjust return map canvas dimensions, maintaining aspect ratio
                 if (returnMapCanvas) {
                     const container = returnMapCanvas.parentElement;
                     returnMapCanvas.width = container.clientWidth;
-                    returnMapCanvas.height = container.clientWidth * (400/800); // Maintain aspect ratio
+                    returnMapCanvas.height = container.clientWidth * (400/800);
                 }
+                // Adjust bifurcation map canvas dimensions, maintaining aspect ratio
                 if (bifurcationMapCanvas) {
                     const container = bifurcationMapCanvas.parentElement;
                     bifurcationMapCanvas.width = container.clientWidth;
-                    bifurcationMapCanvas.height = container.clientWidth * (400/800); // Maintain aspect ratio
-                    drawBifurcationMapInitialState(); // Redraw labels
+                    bifurcationMapCanvas.height = container.clientWidth * (400/800);
+                    drawBifurcationMapInitialState(); // Redraw labels and initial state for resizing
                 }
 
-                drawChart(); // Redraw chart on resize too
+                drawChart(); // Redraw the time series chart
                 initializePond(); // Re-initialize pond to distribute fish correctly on resize
-                drawReturnMap(); // Redraw return map as its axes are dynamic based on r, no need for x_current/x_next here
+                drawReturnMap(); // Redraw return map (clears old points and draws axes/parabola)
             });
         };
     </script>
