@@ -472,57 +472,47 @@
         // === 1. DOM Element References ===
         // Get references to all necessary HTML elements by their IDs.
         // Caching these references improves performance by avoiding repeated DOM lookups.
-        const growthRateSlider = document.getElementById('growthRate');
-        const growthRateValueSpan = document.getElementById('growthRateValue');
-        const initialPopulationSlider = document.getElementById('initialPopulation');
-        const initialPopulationValueSpan = document.getElementById('initialPopulationValue');
-        const randomnessFactorSlider = document.getElementById('randomnessFactor');
-        const randomnessFactorValueSpan = document.getElementById('randomnessFactorValue');
-        const randomnessFrequencySlider = document.getElementById('randomnessFrequency');
-        const randomnessFrequencyValueSpan = document.getElementById('randomnessFrequencyValue');
+        let growthRateSlider;
+        let growthRateValueSpan;
+        let initialPopulationSlider;
+        let initialPopulationValueSpan;
+        let randomnessFactorSlider;
+        let randomnessFactorValueSpan;
+        let randomnessFrequencySlider;
+        let randomnessFrequencyValueSpan;
 
-        const startButton = document.getElementById('startButton');
-        const stopButton = document.getElementById('stopButton');
-        const resetButton = document.getElementById('resetButton');
+        let startButton;
+        let stopButton;
+        let resetButton;
 
-        const getInsightButton = document.getElementById('getInsightButton');
-        const generateBifurcationButton = document.getElementById('generateBifurcationButton'); // This button is now visible again.
-        const llmOutputArea = document.getElementById('llmOutputArea');
-        const llmOutputTitle = llmOutputArea.querySelector('h3');
-        const llmOutputText = document.getElementById('llmOutputText');
+        let getInsightButton;
+        let generateBifurcationButton;
+        let llmOutputArea;
+        let llmOutputTitle;
+        let llmOutputText;
 
         // References for Moving Average controls
-        const movingAverageEnabledCheckbox = document.getElementById('movingAverageEnabled');
-        const movingAverageWindowSlider = document.getElementById('movingAverageWindow');
-        const movingAverageWindowValueSpan = document.getElementById('movingAverageWindowValue');
+        let movingAverageEnabledCheckbox;
+        let movingAverageWindowSlider;
+        let movingAverageWindowValueSpan;
 
-
-        const currentGenerationSpan = document.getElementById('currentGeneration');
-        const currentPopulationXSpan = document.getElementById('currentPopulationX');
-        const currentGrowthRateSpan = document.getElementById('currentGrowthRate');
-        const randomEventAppliedSpan = document.getElementById('randomEventApplied');
+        let currentGenerationSpan;
+        let currentPopulationXSpan;
+        let currentGrowthRateSpan;
+        let randomEventAppliedSpan;
 
         // References for Canvas elements and their 2D rendering contexts
-        const populationChartCanvas = document.getElementById('populationChart');
-        const populationChartCtx = populationChartCanvas ? populationChartCanvas.getContext('2d') : null;
-        // Robust check: Ensure canvases and their contexts are found
-        if (!populationChartCanvas) console.error("Error: Population Chart Canvas element not found!");
-        if (!populationChartCtx) console.error("Error: 2D context could not be obtained from population chart canvas!");
+        let populationChartCanvas;
+        let populationChartCtx;
 
-        const pondCanvas = document.getElementById('pondCanvas');
-        const pondCtx = pondCanvas ? pondCanvas.getContext('2d') : null;
-        if (!pondCanvas) console.error("Error: Pond Canvas element not found!");
-        if (!pondCtx) console.error("Error: 2D context could not be obtained from pond canvas!");
+        let pondCanvas;
+        let pondCtx;
 
-        const returnMapCanvas = document.getElementById('returnMapCanvas');
-        const returnMapCtx = returnMapCanvas ? returnMapCanvas.getContext('2d') : null;
-        if (!returnMapCanvas) console.error("Error: Return Map Canvas element not found!");
-        if (!returnMapCtx) console.error("Error: 2D context could not be obtained from return map canvas!");
+        let returnMapCanvas;
+        let returnMapCtx;
 
-        const bifurcationMapCanvas = document.getElementById('bifurcationMapCanvas');
-        const bifurcationMapCtx = bifurcationMapCanvas ? bifurcationMapCanvas.getContext('2d') : null;
-        if (!bifurcationMapCanvas) console.error("Error: Bifurcation Map Canvas element not found!");
-        if (!bifurcationMapCtx) console.error("Error: 2D context could not be obtained from bifurcation map canvas!");
+        let bifurcationMapCanvas;
+        let bifurcationMapCtx;
 
 
         // === 2. Simulation Variables ===
@@ -672,7 +662,7 @@
          * Starts the main simulation loop.
          * The Bifurcation Diagram generation is now explicitly triggered by its own button.
          */
-        function startSimulation() {
+        async function startSimulation() {
             console.log("startSimulation function invoked (triggered by button click).");
             console.log(`Current simulationInterval ID on start click: ${simulationInterval}`);
 
@@ -1236,7 +1226,7 @@
 
             const chatHistory = [{ role: "user", parts: [{ text: prompt }] }];
             const payload = { contents: chatHistory };
-            const apiKey = ""; // Canvas will provide this API key at runtime
+            const apiKey = "AIzaSyBe4FaOSzP9GaqTpcvW8lV-wKRu9nH82sA"; // Canvas will provide this API key at runtime
 
             const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
 
@@ -1359,6 +1349,56 @@
             // --- Attach Event Listeners ---
             // It is crucial to attach event listeners AFTER the DOM elements are guaranteed to exist,
             // which is why this is done within window.onload.
+
+            // Get all DOM elements inside window.onload to ensure they exist
+            growthRateSlider = document.getElementById('growthRate');
+            growthRateValueSpan = document.getElementById('growthRateValue');
+            initialPopulationSlider = document.getElementById('initialPopulation');
+            initialPopulationValueSpan = document.getElementById('initialPopulationValue');
+            randomnessFactorSlider = document.getElementById('randomnessFactor');
+            randomnessFactorValueSpan = document.getElementById('randomnessFactorValue');
+            randomnessFrequencySlider = document.getElementById('randomnessFrequency');
+            randomnessFrequencyValueSpan = document.getElementById('randomnessFrequencyValue');
+
+            startButton = document.getElementById('startButton');
+            stopButton = document.getElementById('stopButton');
+            resetButton = document.getElementById('resetButton');
+
+            getInsightButton = document.getElementById('getInsightButton');
+            generateBifurcationButton = document.getElementById('generateBifurcationButton');
+            llmOutputArea = document.getElementById('llmOutputArea');
+            llmOutputTitle = llmOutputArea.querySelector('h3');
+            llmOutputText = document.getElementById('llmOutputText');
+
+            movingAverageEnabledCheckbox = document.getElementById('movingAverageEnabled');
+            movingAverageWindowSlider = document.getElementById('movingAverageWindow');
+            movingAverageWindowValueSpan = document.getElementById('movingAverageWindowValue');
+
+            currentGenerationSpan = document.getElementById('currentGeneration');
+            currentPopulationXSpan = document.getElementById('currentPopulationX');
+            currentGrowthRateSpan = document.getElementById('currentGrowthRate');
+            randomEventAppliedSpan = document.getElementById('randomEventApplied');
+
+            populationChartCanvas = document.getElementById('populationChart');
+            populationChartCtx = populationChartCanvas ? populationChartCanvas.getContext('2d') : null;
+            if (!populationChartCanvas) console.error("Error: Population Chart Canvas element not found!");
+            if (!populationChartCtx) console.error("Error: 2D context could not be obtained from population chart canvas!");
+
+            pondCanvas = document.getElementById('pondCanvas');
+            pondCtx = pondCanvas ? pondCanvas.getContext('2d') : null;
+            if (!pondCanvas) console.error("Error: Pond Canvas element not found!");
+            if (!pondCtx) console.error("Error: 2D context could not be obtained from pond canvas!");
+
+            returnMapCanvas = document.getElementById('returnMapCanvas');
+            returnMapCtx = returnMapCanvas ? returnMapCanvas.getContext('2d') : null;
+            if (!returnMapCanvas) console.error("Error: Return Map Canvas element not found!");
+            if (!returnMapCtx) console.error("Error: 2D context could not be obtained from return map canvas!");
+
+            bifurcationMapCanvas = document.getElementById('bifurcationMapCanvas');
+            bifurcationMapCtx = bifurcationMapCanvas ? bifurcationMapCanvas.getContext('2d') : null;
+            if (!bifurcationMapCanvas) console.error("Error: Bifurcation Map Canvas element not found!");
+            if (!bifurcationMapCtx) console.error("Error: 2D context could not be obtained from bifurcation map canvas!");
+
 
             if (startButton) {
                 startButton.addEventListener('click', () => {
