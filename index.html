@@ -325,6 +325,27 @@
             100% { transform: rotate(360deg); }
         }
 
+        /* New styles for the return map chart */
+        .return-map-container {
+            width: 100%; /* Take full width below simulation area */
+            background-color: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
+            margin-top: 20px; /* Space above */
+            margin-left: auto;
+            margin-right: auto;
+            max-width: 800px; /* Match other content max-width */
+        }
+        #returnMapCanvas {
+            border: 1px solid #ccc;
+            background-color: #fff;
+            display: block;
+            margin: 0 auto;
+            width: 100%;
+            height: auto; /* Maintain aspect ratio */
+        }
+
 
         @media (max-width: 768px) {
             .controls {
@@ -333,7 +354,7 @@
             .simulation-area {
                 flex-direction: column; /* Stack chart and values */
             }
-            .chart-container, .current-values, .pond-container { /* Include pond in stacking */
+            .chart-container, .current-values, .pond-container, .return-map-container { /* Include pond and return map in stacking */
                 min-width: unset; /* Remove min-width to allow full flexibility */
                 width: 100%;
                 border-radius: 8px; /* Square off pond on mobile for better fit */
@@ -385,7 +406,7 @@
             <button id="startButton">Start Simulation</button>
             <button id="stopButton" disabled>Stop Simulation</button>
             <button id="resetButton">Reset Simulation</button>
-            <button id="getInsightButton">Get Population Insight ✨</button> <!-- LLM Button (Scenario button removed) -->
+            <button id="getInsightButton">Get Population Insight ✨</button>
         </div>
 
         <div class="simulation-area">
@@ -412,6 +433,13 @@
             </div>
         </div>
 
+        <!-- New section for the Return Map Chart -->
+        <div class="return-map-container">
+            <h2>Phase Space Plot (Return Map: $x_n$ vs $x_{n+1}$)</h2>
+            <p class="description">This chart plots the current population ($x_n$) against the population in the next step ($x_{n+1}$). It reveals the underlying deterministic rule of the logistic map, showing how points always fall on the parabola, even when the time series is chaotic. Randomness is visualized as points deviating from this perfect curve.</p>
+            <canvas id="returnMapCanvas" width="800" height="400"></canvas>
+        </div>
+
         <!-- Area to display LLM output - MOVED HERE and simplified for single output -->
         <div id="llmOutputArea">
             <h3>AI-Generated Insight:</h3>
@@ -436,7 +464,6 @@
         const resetButton = document.getElementById('resetButton');
 
         const getInsightButton = document.getElementById('getInsightButton');
-        // Removed getScenarioButton as per new requirements
         const llmOutputArea = document.getElementById('llmOutputArea');
         const llmOutputTitle = llmOutputArea.querySelector('h3'); // Reference the h3 for dynamic title
         const llmOutputText = document.getElementById('llmOutputText');
@@ -465,6 +492,16 @@
         }
         if (!pondCtx) {
             console.error("Error: 2D context could not be obtained from pond canvas!");
+        }
+
+        // Canvas for Return Map
+        const returnMapCanvas = document.getElementById('returnMapCanvas');
+        const returnMapCtx = returnMapCanvas ? returnMapCanvas.getContext('2d') : null;
+        if (!returnMapCanvas) {
+            console.error("Error: Return Map Canvas element not found!");
+        }
+        if (!returnMapCtx) {
+            console.error("Error: 2D context could not be obtained from return map canvas!");
         }
 
 
@@ -501,6 +538,7 @@
 
             updateDisplay(); // Update the displayed current values
             drawChart(); // Draw the initial state on the population chart
+            drawReturnMap(); // Draw the initial state on the return map chart
             console.log(`Initial state set: r=${r.toFixed(2)}, x=${x.toFixed(4)}, ` +
                         `randomnessFactor=${randomnessFactor.toFixed(3)}, randomnessFrequency=${randomnessFrequency.toFixed(2)}`);
 
@@ -515,6 +553,14 @@
                 }
                 animatePond(); // Start the pond animation loop
             }
+
+            // Ensure return map canvas is sized correctly on init
+            if (returnMapCanvas) {
+                const container = returnMapCanvas.parentElement;
+                returnMapCanvas.width = container.clientWidth;
+                returnMapCanvas.height = container.clientHeight;
+            }
+
              // Reset LLM output area on initialization
             llmOutputArea.style.display = 'block'; // Ensure it's visible with initial message
             llmOutputTitle.textContent = "AI-Generated Insight:";
@@ -622,6 +668,7 @@
                 populationHistory[0] = x; // Update initial history point
                 drawChart(); // Redraw chart for new initial population
                 initializePond(); // Re-initialize pond with new initial population
+                drawReturnMap(); // Redraw return map with new initial population
             }
             console.log(`Initial population slider adjusted: ${x}`);
         });
@@ -657,7 +704,6 @@
 
         // --- LLM Feature Event Listeners ---
         getInsightButton.addEventListener('click', getPopulationInsight);
-        // Removed getScenarioButton.addEventListener('click', getPondScenario);
 
 
         // --- Main Simulation Loop Logic ---
@@ -666,6 +712,9 @@
             try {
                 generation++; // Increment the generation counter
                 // console.log(`--- Running simulation step ${generation} ---`); // Commented for less console noise during normal run
+
+                // Store current X before calculating next X for return map
+                const currentXForReturnMap = x;
 
                 // 1. Logistic Map Calculation (Deterministic Chaos)
                 // The core equation: next population = r * current_population * (1 - current_population)
@@ -703,6 +752,7 @@
 
                 updateDisplay(appliedRandomEvent); // Update UI elements with current values
                 drawChart(); // Redraw the population chart
+                drawReturnMap(currentXForReturnMap, x); // Draw the new point on the return map
 
                 // Check for extinction and stop simulation if population hits zero or very close to zero
                 if (x <= 0.001) { // Using a small threshold instead of exact 0 for floating point robustness
@@ -846,6 +896,85 @@
             }
         }
 
+        // --- Draw Return Map Function ---
+        function drawReturnMap(x_current, x_next) {
+            if (!returnMapCtx) {
+                console.error("Return Map Canvas 2D context is not available for drawing.");
+                return;
+            }
+
+            const padding = 50;
+            const mapWidth = returnMapCanvas.width - padding;
+            const mapHeight = returnMapCanvas.height - padding;
+
+            // Clear only if it's the first point, or reset
+            if (generation === 0 || (generation === 1 && x_current === 0.5)) { // Assuming initial x is 0.5 for reset
+                 returnMapCtx.clearRect(0, 0, returnMapCanvas.width, returnMapCanvas.height); // Clear entire canvas on reset
+                 // Draw axes and reference line on reset
+                 returnMapCtx.beginPath();
+                 returnMapCtx.strokeStyle = '#999';
+                 returnMapCtx.lineWidth = 1;
+                 returnMapCtx.moveTo(padding, 0); returnMapCtx.lineTo(padding, mapHeight); // Y-axis
+                 returnMapCtx.moveTo(padding, mapHeight); returnMapCtx.lineTo(returnMapCanvas.width, mapHeight); // X-axis
+                 returnMapCtx.stroke();
+
+                 // Labels
+                 returnMapCtx.fillStyle = '#555';
+                 returnMapCtx.font = '12px Arial';
+                 returnMapCtx.textAlign = 'right';
+                 returnMapCtx.textBaseline = 'middle';
+                 returnMapCtx.fillText('1.0', padding - 10, 0 + 10);
+                 returnMapCtx.fillText('0.5', padding - 10, mapHeight / 2);
+                 returnMapCtx.fillText('0.0', padding - 10, mapHeight - 5);
+                 returnMapCtx.textAlign = 'center';
+                 returnMapCtx.textBaseline = 'top';
+                 returnMapCtx.fillText('Current Population ($x_n$)', padding + mapWidth / 2, mapHeight + 10);
+                 returnMapCtx.save(); // Save context state before rotation
+                 returnMapCtx.translate(padding - 30, mapHeight / 2);
+                 returnMapCtx.rotate(-Math.PI / 2);
+                 returnMapCtx.fillText('Next Population ($x_{n+1}$)', 0, 0);
+                 returnMapCtx.restore(); // Restore context to original state
+
+                 // Draw the y=x diagonal line
+                 returnMapCtx.beginPath();
+                 returnMapCtx.strokeStyle = 'rgba(0, 0, 255, 0.3)'; // Light blue
+                 returnMapCtx.lineWidth = 1;
+                 returnMapCtx.moveTo(padding, mapHeight);
+                 returnMapCtx.lineTo(returnMapCanvas.width, 0);
+                 returnMapCtx.stroke();
+
+                 // Draw the logistic map parabola for reference
+                 returnMapCtx.beginPath();
+                 returnMapCtx.strokeStyle = 'rgba(128, 0, 128, 0.5)'; // Purple for the curve
+                 returnMapCtx.lineWidth = 1;
+                 for (let i = 0; i <= 100; i++) {
+                     const px = i / 100; // x_n
+                     const py = r * px * (1 - px); // x_{n+1}
+                     const plotX = padding + px * mapWidth;
+                     const plotY = mapHeight - py * mapHeight;
+                     if (i === 0) {
+                         returnMapCtx.moveTo(plotX, plotY);
+                     } else {
+                         returnMapCtx.lineTo(plotX, plotY);
+                     }
+                 }
+                 returnMapCtx.stroke();
+            }
+
+
+            // Draw the current point (x_current, x_next)
+            if (generation > 0) {
+                const plotX = padding + x_current * mapWidth;
+                const plotY = mapHeight - x_next * mapHeight; // Y-axis inverted for drawing
+
+                returnMapCtx.beginPath();
+                returnMapCtx.arc(plotX, plotY, 3, 0, Math.PI * 2); // Small dot
+                returnMapCtx.fillStyle = '#007bff'; // Blue dot
+                returnMapCtx.fill();
+            }
+        }
+
+
         // --- Custom Message Box Function (to replace native alert() for better UI) ---
         function displayMessage(title, message) {
             let messageBox = document.getElementById('messageBox');
@@ -949,7 +1078,7 @@
             let chatHistory = [];
             chatHistory.push({ role: "user", parts: [{ text: prompt }] });
             const payload = { contents: chatHistory };
-            const apiKey = "AIzaSyBe4FaOSzP9GaqTpcvW8lV-wKRu9nH82sA"; // Canvas will provide this at runtime
+            const apiKey = ""; // Canvas will provide this at runtime
 
             const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
 
@@ -990,16 +1119,20 @@
 
         async function getPopulationInsight() {
             let r_behavior_description = "";
-            let chaos_explanation_general = "Chaos theory describes how seemingly random behavior can arise from simple, deterministic rules when systems are highly sensitive to initial conditions. This is often called the 'butterfly effect' because a tiny, unnoticeable change at one point can lead to drastically different outcomes later on. In population models, it means precise long-term prediction is impossible even if we know all the rules, due to inherent unpredictability.";
+            let chaos_explanation_specific = "";
 
             if (r < 3.0) {
-                r_behavior_description = "the population will likely stabilize at a single point.";
+                r_behavior_description = "The population will likely stabilize at a single, predictable point.";
+                chaos_explanation_specific = "At this 'r' value, the simulation is not in a chaotic regime. The population's behavior is stable and predictable, meaning small differences in starting conditions will not lead to drastically different long-term outcomes. The effects of randomness will be observed as minor, temporary fluctuations around this stable point.";
             } else if (r >= 3.0 && r < 3.449) {
-                r_behavior_description = "the population will oscillate between two or more values (period doubling).";
+                r_behavior_description = "The population will oscillate between two or more fixed values in a predictable cycle (period doubling).";
+                chaos_explanation_specific = "The simulation exhibits oscillatory behavior, often seen as period-doubling bifurcations before true chaos. While the population fluctuates, it follows a predictable pattern of values. Sensitive dependence is minimal; randomness primarily introduces noise around these predictable cycles.";
             } else if (r >= 3.449 && r < 3.569) {
-                r_behavior_description = "the population will exhibit more complex oscillations (further period doubling).";
+                r_behavior_description = "The population will exhibit more complex, multi-period oscillations, on the edge of chaos.";
+                chaos_explanation_specific = "This 'r' value places the simulation in a highly sensitive region, close to the onset of chaos. The population's behavior is complex, showing multiple oscillating periods, and is highly susceptible to the 'butterfly effect.' Even tiny variations, including those from our introduced randomness, can push the system into wildly different, unpredictable paths over time.";
             } else { // r >= 3.569
-                r_behavior_description = "the population is in a chaotic regime, making long-term prediction unpredictable despite deterministic rules.";
+                r_behavior_description = "The population is in a truly chaotic regime, making long-term prediction practically impossible despite deterministic rules.";
+                chaos_explanation_specific = "In this chaotic state, the simulation demonstrates extreme sensitive dependence on initial conditions. Even if we could precisely know every parameter, a minute, unmeasurable difference (like the smallest fraction of a fish or a microscopic environmental change) would lead to entirely divergent population trajectories. The 'randomness factor' further amplifies this unpredictability, ensuring the observed behavior never precisely repeats and appears genuinely random, even though it's governed by the simple logistic equation.";
             }
 
             let x_trend_description = "";
@@ -1017,18 +1150,21 @@
                 x_trend_description = "The simulation has just started or reset.";
             }
 
-            const randomness_effect = `The 'Randomness Factor' (currently ${randomnessFactor.toFixed(3)}) and 'Randomness Frequency' (currently ${randomnessFrequency.toFixed(2)}) introduce external, unpredictable disturbances that mimic real-world events, like sudden environmental shifts or diseases, further complicating the population's path.`;
+            const randomness_effect = `The 'Randomness Factor' (currently ${randomnessFactor.toFixed(3)}) and 'Randomness Frequency' (currently ${randomnessFrequency.toFixed(2)}) introduce external, unpredictable disturbances that mimic real-world events, like sudden environmental shifts or diseases. This randomness further influences the population's path, especially in chaotic regimes where small perturbations have amplified effects.`;
+
+            // Adding explanation of fish population
+            const fish_population_explanation = `In this model, the 'population (x)' is a normalized value between 0 and 1. '0' represents extinction (no fish), while '1' represents the maximum carrying capacity of the pond (the largest population the environment can sustain). This simplification allows us to observe the proportional changes in population relative to its limit, rather than tracking exact large numbers of individual fish.`;
 
 
-            const insightPrompt = `This simulation models goldfish population using the logistic map (P_next = r * P * (1 - P)) combined with external random perturbations. The goal is to illustrate how deterministic systems can exhibit chaotic behavior, amplified by randomness.
+            const insightPrompt = `This simulation models goldfish population dynamics using the logistic map (P_next = r * P * (1 - P)) and incorporates random perturbations. It aims to demonstrate how even simple deterministic rules can lead to complex, unpredictable, chaotic behavior.
 
-            Given the current growth rate 'r' of ${r.toFixed(2)} and current normalized population 'x' of ${x.toFixed(4)}:
-            - Based on 'r', the population behavior is expected to be: ${r_behavior_description}
-            - Current population 'x' status: ${x_trend_description}
-            - Explanation of Chaos Theory in this model: ${chaos_explanation_general}
-            - Effect of Randomness: ${randomness_effect}
+            - **Understanding the Fish Population (x):** ${fish_population_explanation}
+            - **Population Behavior (based on r=${r.toFixed(2)}):** ${r_behavior_description}
+            - **Current Trend:** ${x_trend_description}
+            - **Chaos Theory Connection:** ${chaos_explanation_specific}
+            - **Impact of Randomness:** ${randomness_effect}
 
-            Provide a concise, overall explanation of the model and these results, highlighting the interplay of chaos and randomness, in about 5-7 sentences.`;
+            Provide a comprehensive, concise analysis explaining how these elements interact to produce the observed simulation results. Focus on how the current parameters reflect or demonstrate the principles of chaos theory and randomness, including the model's representation of the fish population. Keep the explanation to about 6-10 sentences.`;
 
 
             callGeminiAPI(insightPrompt, "Population Model & Results Insight:");
@@ -1042,15 +1178,27 @@
             initializeSimulation();
             console.log("Script loaded and initial simulation state set. Ready to start.");
 
-            // Add a resize listener for the pond canvas to ensure responsiveness
+            // Add a resize listener for the canvases to ensure responsiveness
             window.addEventListener('resize', () => {
                 if (pondCanvas) {
                     const container = pondCanvas.parentElement;
                     pondCanvas.width = container.clientWidth;
                     pondCanvas.height = container.clientHeight;
                 }
+                if (populationChartCanvas) {
+                    const container = populationChartCanvas.parentElement;
+                    populationChartCanvas.width = container.clientWidth;
+                    populationChartCanvas.height = container.clientWidth * (400/800); // Maintain aspect ratio
+                }
+                if (returnMapCanvas) {
+                    const container = returnMapCanvas.parentElement;
+                    returnMapCanvas.width = container.clientWidth;
+                    returnMapCanvas.height = container.clientWidth * (400/800); // Maintain aspect ratio
+                }
+
                 drawChart(); // Redraw chart on resize too
                 initializePond(); // Re-initialize pond to distribute fish correctly on resize
+                drawReturnMap(x, r * x * (1 - x)); // Redraw return map as its axes are dynamic based on r
             });
         };
     </script>
