@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Goldfish Pond Population Dynamics</title>
-    <!-- Embedded CSS for styling the page -->
     <style>
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -14,14 +13,14 @@
             min-height: 100vh;
             background-color: #e0f2f7;
             color: #333;
-            margin: 20px;
+            margin: 1rem; /* Use rem for better mobile scaling */
         }
 
         .container {
             background-color: #ffffff;
-            padding: 30px;
-            border-radius: 12px;
-            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+            padding: 2rem; /* Use rem for padding */
+            border-radius: 0.75rem; /* Use rem for border-radius */
+            box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.1); /* Use rem for shadow */
             max-width: 1000px;
             width: 100%;
             text-align: center;
@@ -29,25 +28,25 @@
 
         h1 {
             color: #007bff;
-            margin-bottom: 15px;
-            font-size: 2.2em;
+            margin-bottom: 1rem;
+            font-size: 2.2rem; /* Use rem for font-size */
         }
 
         p {
-            font-size: 1.1em;
+            font-size: 1.1rem; /* Use rem for font-size */
             line-height: 1.6;
-            margin-bottom: 20px;
+            margin-bottom: 1.5rem;
         }
 
         .controls {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-            gap: 25px;
-            margin-bottom: 30px;
+            grid-template-columns: repeat(auto-fit, minmax(17rem, 1fr)); /* Adjusted minmax for mobile */
+            gap: 1.5rem; /* Use rem for gap */
+            margin-bottom: 2rem;
             background-color: #f8f9fa;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.05);
+            padding: 1.25rem; /* Use rem for padding */
+            border-radius: 0.5rem;
+            box-shadow: inset 0 0.125rem 0.25rem rgba(0, 0, 0, 0.05);
         }
 
         .control-group {
@@ -56,7 +55,7 @@
 
         .control-group label {
             display: block;
-            margin-bottom: 8px;
+            margin-bottom: 0.5rem;
             font-weight: bold;
             color: #555;
         }
@@ -64,8 +63,8 @@
         .control-group input[type="range"] {
             width: 100%;
             -webkit-appearance: none;
-            height: 8px;
-            border-radius: 5px;
+            height: 0.5rem;
+            border-radius: 0.3125rem;
             background: #d3d3d3;
             outline: none;
             opacity: 0.7;
@@ -76,33 +75,33 @@
         .control-group input[type="range"]::-webkit-slider-thumb {
             -webkit-appearance: none;
             appearance: none;
-            width: 20px;
-            height: 20px;
+            width: 1.25rem;
+            height: 1.25rem;
             border-radius: 50%;
             background: #007bff;
             cursor: pointer;
-            border: 2px solid #fff;
+            border: 0.125rem solid #fff;
         }
 
         .control-group input[type="range"]::-moz-range-thumb {
-            width: 20px;
-            height: 20px;
+            width: 1.25rem;
+            height: 1.25rem;
             border-radius: 50%;
             background: #007bff;
             cursor: pointer;
-            border: 2px solid #fff;
+            border: 0.125rem solid #fff;
         }
 
         .control-group span {
             font-weight: bold;
             color: #007bff;
-            margin-left: 10px;
+            margin-left: 0.625rem;
         }
 
         .control-group .description {
-            font-size: 0.9em;
+            font-size: 0.9rem;
             color: #666;
-            margin-top: 5px;
+            margin-top: 0.3125rem;
             margin-bottom: 0;
         }
 
@@ -110,17 +109,17 @@
             background-color: #28a745;
             color: white;
             border: none;
-            padding: 12px 25px;
-            border-radius: 5px;
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.3125rem;
             cursor: pointer;
-            font-size: 1.1em;
-            margin: 0 10px;
+            font-size: 1.1rem;
+            margin: 0.625rem 0.625rem; /* Adjust margin for buttons */
             transition: background-color 0.3s ease, transform 0.2s ease;
         }
 
         button:hover:not(:disabled) {
             background-color: #218838;
-            transform: translateY(-2px);
+            transform: translateY(-0.125rem);
         }
 
         button:active:not(:disabled) {
@@ -151,7 +150,7 @@
         }
 
         /* New button styles for LLM features */
-        button#getInsightButton, button#generateBifurcationButton { /* Added bifurcation button */
+        button#getInsightButton, button#generateBifurcationButton {
             background-color: #6f42c1; /* Purple color */
             color: white;
         }
@@ -162,40 +161,40 @@
 
         .simulation-area {
             display: flex;
-            flex-wrap: wrap; /* Allows wrapping on smaller screens */
-            gap: 30px;
+            flex-wrap: wrap;
+            gap: 1.875rem; /* Use rem for gap */
             justify-content: center;
-            margin-top: 30px;
-            margin-bottom: 30px; /* Added space before LLM output */
+            margin-top: 1.875rem;
+            margin-bottom: 1.875rem;
         }
 
         .chart-container {
-            flex: 2; /* Takes more space */
-            min-width: 400px; /* Minimum width for the chart */
+            flex: 2;
+            min-width: 25rem; /* Adjusted min-width for mobile responsiveness */
             background-color: #f8f9fa;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
+            padding: 1.25rem;
+            border-radius: 0.5rem;
+            box-shadow: 0 0.25rem 0.5rem rgba(0, 0, 0, 0.05);
         }
 
         .current-values {
-            flex: 1; /* Takes remaining space */
-            min-width: 250px; /* Minimum width for values */
+            flex: 1;
+            min-width: 15rem; /* Adjusted min-width for mobile */
             background-color: #f8f9fa;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
+            padding: 1.25rem;
+            border-radius: 0.5rem;
+            box-shadow: 0 0.25rem 0.5rem rgba(0, 0, 0, 0.05);
             text-align: left;
         }
 
         h2 {
             color: #0056b3;
-            margin-bottom: 15px;
-            font-size: 1.8em;
+            margin-bottom: 1rem;
+            font-size: 1.8rem;
         }
 
         canvas {
-            border: 1px solid #ccc;
+            border: 0.0625rem solid #ccc;
             background-color: #fff;
             display: block;
             margin: 0 auto;
@@ -204,8 +203,8 @@
         }
 
         .current-values p {
-            margin-bottom: 10px;
-            font-size: 1.1em;
+            margin-bottom: 0.625rem;
+            font-size: 1.1rem;
             color: #444;
         }
 
@@ -214,9 +213,9 @@
         }
 
         .current-values .note {
-            font-size: 0.9em;
+            font-size: 0.9rem;
             color: #777;
-            margin-top: 20px;
+            margin-top: 1.25rem;
         }
 
         /* Styles for the custom message box */
@@ -226,15 +225,15 @@
             left: 50%;
             transform: translate(-50%, -50%);
             background-color: #fff;
-            padding: 30px;
-            border-radius: 10px;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+            padding: 1.875rem;
+            border-radius: 0.625rem;
+            box-shadow: 0 0.3125rem 0.9375rem rgba(0, 0, 0, 0.3);
             z-index: 1000;
             text-align: center;
             max-width: 400px;
             width: 90%;
             animation: fadeIn 0.3s ease-out;
-            display: none; /* Hidden by default */
+            display: none;
         }
 
         #messageBoxOverlay {
@@ -246,7 +245,7 @@
             background: rgba(0,0,0,0.5);
             z-index: 999;
             animation: fadeIn 0.3s ease-out;
-            display: none; /* Hidden by default */
+            display: none;
         }
 
         @keyframes fadeIn {
@@ -260,16 +259,16 @@
 
         /* New styles for the pond animation area */
         .pond-container {
-            flex: 2; /* Takes more space, similar to chart */
-            min-width: 400px;
-            background-color: #d0f0f8; /* Light blue for water */
-            border: 5px solid #007bff; /* Pond border */
-            border-radius: 50%; /* Make it circular/oval */
-            overflow: hidden; /* Keep fish inside */
+            flex: 2;
+            min-width: 25rem;
+            background-color: #d0f0f8;
+            border: 0.3125rem solid #007bff;
+            border-radius: 50%;
+            overflow: hidden;
             position: relative;
-            aspect-ratio: 16 / 9; /* Maintain aspect ratio for pond */
-            margin-bottom: 30px; /* Space below pond */
-            box-shadow: inset 0 0 15px rgba(0, 123, 255, 0.5), 0 8px 16px rgba(0, 0, 0, 0.1);
+            aspect-ratio: 16 / 9;
+            margin-bottom: 1.875rem;
+            box-shadow: inset 0 0 0.9375rem rgba(0, 123, 255, 0.5), 0 0.5rem 1rem rgba(0, 0, 0, 0.1);
         }
 
         #pondCanvas {
@@ -278,46 +277,46 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background-color: transparent; /* Pond background is from .pond-container */
+            background-color: transparent;
         }
 
         /* Styles for LLM Output Area */
         #llmOutputArea {
-            margin-top: 20px;
-            padding: 20px;
-            border: 1px solid #c3b1e6; /* Consistent border with LLM elements */
-            border-radius: 8px;
-            background-color: #e6e6fa; /* Light purple background */
+            margin-top: 1.25rem;
+            padding: 1.25rem;
+            border: 0.0625rem solid #c3b1e6;
+            border-radius: 0.5rem;
+            background-color: #e6e6fa;
             text-align: left;
-            display: none; /* Hidden by default */
+            display: none;
             max-width: 800px;
             margin-left: auto;
             margin-right: auto;
-            word-wrap: break-word; /* Ensure long words wraps */
+            word-wrap: break-word;
         }
         #llmOutputArea h3 {
             color: #563391;
             margin-top: 0;
-            margin-bottom: 15px;
-            font-size: 1.5em;
+            margin-bottom: 0.9375rem;
+            font-size: 1.5rem;
             text-align: center;
         }
         #llmOutputText {
-            font-size: 1.1em;
+            font-size: 1.1rem;
             line-height: 1.6;
             margin-bottom: 0;
-            white-space: pre-wrap; /* Preserves whitespace and wraps text */
+            white-space: pre-wrap;
         }
         .loading-spinner {
-            border: 4px solid #f3f3f3; /* Light grey */
-            border-top: 4px solid #6f42c1; /* Purple */
+            border: 0.25rem solid #f3f3f3;
+            border-top: 0.25rem solid #6f42c1;
             border-radius: 50%;
-            width: 20px;
-            height: 20px;
+            width: 1.25rem;
+            height: 1.25rem;
             animation: spin 1s linear infinite;
             display: inline-block;
             vertical-align: middle;
-            margin-left: 10px;
+            margin-left: 0.625rem;
         }
 
         @keyframes spin {
@@ -326,43 +325,88 @@
         }
 
         /* New styles for the return map chart */
-        .return-map-container, .bifurcation-map-container { /* Added bifurcation container */
-            width: 100%; /* Take full width below simulation area */
+        .return-map-container, .bifurcation-map-container {
+            width: 100%;
             background-color: #f8f9fa;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
-            margin-top: 20px; /* Space above */
+            padding: 1.25rem;
+            border-radius: 0.5rem;
+            box-shadow: 0 0.25rem 0.5rem rgba(0, 0, 0, 0.05);
+            margin-top: 1.25rem;
             margin-left: auto;
             margin-right: auto;
-            max-width: 800px; /* Match other content max-width */
+            max-width: 800px;
         }
-        #returnMapCanvas, #bifurcationMapCanvas { /* Added bifurcation canvas */
-            border: 1px solid #ccc;
+        #returnMapCanvas, #bifurcationMapCanvas {
+            border: 0.0625rem solid #ccc;
             background-color: #fff;
             display: block;
             margin: 0 auto;
             width: 100%;
-            height: auto; /* Maintain aspect ratio */
+            height: auto;
         }
 
 
+        /* Mobile-First Adjustments */
         @media (max-width: 768px) {
+            .container {
+                padding: 1rem; /* Smaller padding on mobile */
+            }
+            h1 {
+                font-size: 1.8rem; /* Smaller heading on mobile */
+            }
+            p, .control-group .description, #llmOutputText {
+                font-size: 1rem; /* Base font size for mobile readability */
+            }
             .controls {
                 grid-template-columns: 1fr; /* Stack controls on small screens */
-            }
-            .simulation-area {
-                flex-direction: column; /* Stack chart and values */
-            }
-            .chart-container, .current-values, .pond-container, .return-map-container, .bifurcation-map-container { /* Include pond and return map in stacking */
-                min-width: unset; /* Remove min-width to allow full flexibility */
-                width: 100%;
-                border-radius: 8px; /* Square off pond on mobile for better fit */
-                aspect-ratio: unset; /* Let height adjust for mobile */
-                height: 300px; /* Fixed height for pond on mobile */
+                gap: 1rem; /* Smaller gap */
+                padding: 1rem;
             }
             button {
-                margin: 10px 5px; /* Adjust button spacing */
+                margin: 0.5rem 0; /* Stack buttons vertically */
+                width: 100%; /* Full width buttons */
+            }
+            .simulation-area {
+                flex-direction: column; /* Stack chart, pond, and values vertically */
+                gap: 1.5rem; /* Smaller gap */
+            }
+            .chart-container, .current-values, .pond-container, .return-map-container, .bifurcation-map-container {
+                min-width: unset; /* Remove min-width constraints */
+                width: 100%; /* Take full width */
+                border-radius: 0.5rem; /* Consistent border-radius */
+                aspect-ratio: unset; /* Let height be flexible or set specific height */
+                height: 20rem; /* Fixed height for canvases on small screens for better consistency */
+                margin-bottom: 1rem; /* Adjust margin */
+            }
+            .pond-container {
+                border-radius: 0.5rem; /* Square off pond on mobile */
+                box-shadow: inset 0 0 0.9375rem rgba(0, 123, 255, 0.5), 0 0.25rem 0.5rem rgba(0, 0, 0, 0.1);
+            }
+            .current-values {
+                min-width: unset; /* Remove min-width */
+            }
+            #llmOutputArea {
+                padding: 1rem;
+                margin-top: 1.5rem;
+            }
+            h2 {
+                font-size: 1.5rem;
+            }
+        }
+
+        /* Media query for very small mobile devices if needed */
+        @media (max-width: 480px) {
+            .container {
+                padding: 0.5rem;
+            }
+            h1 {
+                font-size: 1.5rem;
+            }
+            p, .control-group .description, #llmOutputText {
+                font-size: 0.9rem;
+            }
+            h2 {
+                font-size: 1.3rem;
             }
         }
     </style>
@@ -373,28 +417,24 @@
         <p>This simulation visually demonstrates the **Butterfly Effect** as it applies to a goldfish pond population, illustrating the core principles of **chaos theory** and the influence of **randomness**. While our underlying population growth rule is simple and deterministic (the logistic map), you'll observe how tiny, almost imperceptible differences in starting conditions for the goldfish population, coupled with random external disturbances, can lead to wildly divergent and unpredictable long-term outcomes. This highlights that even for seemingly simple systems, precise long-term prediction can be impossible, revealing patterns of structured unpredictability. Adjust the parameters to actively explore how the pond's population shifts between stable, oscillating, and truly chaotic states.</p>
 
         <div class="controls">
-            <!-- Control group for Growth Rate (r) -->
             <div class="control-group">
                 <label for="growthRate">Growth Rate (r):</label>
                 <input type="range" id="growthRate" min="0.1" max="4.0" step="0.01" value="3.5">
                 <span id="growthRateValue">3.5</span>
                 <p class="description">Higher values of 'r' (especially above ~3.57) push the system towards chaotic behavior, where small changes have unpredictable long-term effects. (Range: 0.1 - 4.0)</p>
             </div>
-            <!-- Control group for Initial Population (x0) -->
             <div class="control-group">
                 <label for="initialPopulation">Initial Population (x0):</label>
                 <input type="range" id="initialPopulation" min="0.01" max="0.99" step="0.01" value="0.5">
                 <span id="initialPopulationValue">0.5</span>
                 <p class="description">The starting normalized population (0 to 1). In chaotic regimes, even tiny differences here can lead to vastly different outcomes over time. (Range: 0.01 - 0.99)</p>
             </div>
-            <!-- Control group for Randomness Factor -->
             <div class="control-group">
                 <label for="randomnessFactor">Randomness Factor:</label>
                 <input type="range" id="randomnessFactor" min="0.0" max="0.1" step="0.001" value="0.01">
                 <span id="randomnessFactorValue">0.01</span>
                 <p class="description">The maximum magnitude of random environmental perturbations (e.g., unexpected deaths or births) applied at each step. (Range: 0.0 - 0.1)</p>
             </div>
-            <!-- Control group for Randomness Frequency -->
             <div class="control-group">
                 <label for="randomnessFrequency">Randomness Frequency:</label>
                 <input type="range" id="randomnessFrequency" min="0.0" max="1.0" step="0.01" value="0.1">
@@ -402,7 +442,6 @@
                 <p class="description">The probability (0 to 1) that a random event occurs during each simulation step. (Range: 0.0 - 1.0)</p>
             </div>
 
-            <!-- New control group for Moving Average -->
             <div class="control-group">
                 <label for="movingAverageEnabled">
                     <input type="checkbox" id="movingAverageEnabled"> Show Moving Average
@@ -414,15 +453,13 @@
             </div>
 
 
-            <!-- Action buttons for the simulation -->
-            <button id="startButton">Start Simulation</button>
-            <button id="stopButton" disabled>Stop Simulation</button>
-            <button id="resetButton">Reset Simulation</button>
-            <button id="getInsightButton">Get Population Insight ✨</button>
-            <button id="generateBifurcationButton">Generate Bifurcation Diagram 📈</button>
+            <button id="generateBifurcationButton">Step 1: Generate Bifurcation Diagram 📈</button>
+            <button id="startButton">Step 2: Start Simulation ▶️</button>
+            <button id="stopButton" disabled>Stop Simulation ⏸️</button>
+            <button id="resetButton">Reset Simulation 🔄</button>
+            <button id="getInsightButton">Step 3: Get Model Insights ✨</button>
         </div>
 
-        <!-- New section for the Bifurcation Diagram Chart (Moved to be immediately below buttons) -->
         <div class="bifurcation-map-container">
             <h2>Bifurcation Diagram (Attractors vs. Growth Rate 'r')</h2>
             <p class="description">This diagram is like a roadmap for the goldfish population's long-term future, revealing its behavior as you change the "growth rate" (the 'r' value). It plots the population's eventual settled values (attractors) for each 'r'. You'll see it transition from a single stable line, to splitting lines (oscillations), and then to dense, filled regions as chaos emerges. It's a visual journey showing how the system shifts from predictable to unpredictable patterns.</p>
@@ -430,19 +467,16 @@
         </div>
 
         <div class="simulation-area">
-            <!-- Canvas for the population chart -->
             <div class="chart-container">
                 <h2>Population Over Time (Normalized)</h2>
                 <canvas id="populationChart" width="800" height="400"></canvas>
             </div>
 
-            <!-- Pond Animation Area -->
             <div class="pond-container">
                 <h2>Pond Animation</h2>
                 <canvas id="pondCanvas"></canvas>
             </div>
 
-            <!-- Display current simulation values -->
             <div class="current-values">
                 <h2>Current State</h2>
                 <p><strong>Generation:</strong> <span id="currentGeneration">0</span></p>
@@ -453,25 +487,22 @@
             </div>
         </div>
 
-        <!-- New section for the Return Map Chart -->
         <div class="return-map-container">
             <h2>Phase Space Plot (Return Map: $x_n$ vs $x_{n+1}$)</h2>
             <p class="description">This chart plots the current population ($x_n$) against the population in the next step ($x_{n+1}$). It reveals the underlying deterministic rule of the logistic map, showing how points always fall on the parabola, even when the time series is chaotic. Randomness is visualized as points deviating from this perfect curve.</p>
             <canvas id="returnMapCanvas" width="800" height="400"></canvas>
         </div>
 
-        <!-- Area to display LLM output - MOVED HERE and simplified for single output -->
         <div id="llmOutputArea">
             <h3>AI-Generated Insight:</h3>
-            <p id="llmOutputText">Click the "Get Population Insight ✨" button to get an AI-powered analysis of your goldfish pond!</p>
+            <p id="llmOutputText">Click the "Get Model Insights ✨" button to get an AI-powered analysis of your goldfish pond!</p>
         </div>
     </div>
 
-    <!-- Embedded JavaScript for simulation logic and interactions -->
     <script>
-        // === 1. DOM Element References ===
-        // Get references to all necessary HTML elements by their IDs.
-        // Caching these references improves performance by avoiding repeated DOM lookups.
+        // === 1. Global Variable Declarations (Will be assigned in window.onload) ===
+        // Declare all DOM element variables here. They will be assigned their actual element references
+        // within the window.onload function to ensure the HTML is fully parsed.
         let growthRateSlider;
         let growthRateValueSpan;
         let initialPopulationSlider;
@@ -491,7 +522,6 @@
         let llmOutputTitle;
         let llmOutputText;
 
-        // References for Moving Average controls
         let movingAverageEnabledCheckbox;
         let movingAverageWindowSlider;
         let movingAverageWindowValueSpan;
@@ -501,7 +531,6 @@
         let currentGrowthRateSpan;
         let randomEventAppliedSpan;
 
-        // References for Canvas elements and their 2D rendering contexts
         let populationChartCanvas;
         let populationChartCtx;
 
@@ -564,7 +593,7 @@
             updateDisplay(); // Update current state numerical display
             drawChart(); // Draw the initial population chart
             drawReturnMap(); // Draw the initial return map axes and parabola
-            drawBifurcationMapInitialState(); // Draw initial state for bifurcation diagram
+            drawBifurcationMapInitialState(); // Draw initial state for bifurcation diagram (placeholder)
 
             console.log(`Initial state set: r=${r.toFixed(2)}, x=${x.toFixed(4)}, ` +
                         `randomnessFactor=${randomnessFactor.toFixed(3)}, randomnessFrequency=${randomnessFrequency.toFixed(2)}`);
@@ -594,7 +623,7 @@
             // Reset LLM output area on initialization
             llmOutputArea.style.display = 'block';
             llmOutputTitle.textContent = "AI-Generated Insight:";
-            llmOutputText.innerHTML = "Click the \"Get Population Insight ✨\" button to get an AI-powered analysis of your goldfish pond!";
+            llmOutputText.innerHTML = "Click the \"Get Model Insights ✨\" button to get an AI-powered analysis of your goldfish pond!";
         }
 
         /**
@@ -660,9 +689,9 @@
 
         /**
          * Starts the main simulation loop.
-         * The Bifurcation Diagram generation is now explicitly triggered by its own button.
+         * This function handles the "Step 2" action.
          */
-        async function startSimulation() {
+        function startSimulation() {
             console.log("startSimulation function invoked (triggered by button click).");
             console.log(`Current simulationInterval ID on start click: ${simulationInterval}`);
 
@@ -671,13 +700,12 @@
                 return;
             }
 
-            // Disable Start button and enable Stop button immediately.
+            // Disable Start button and enable Stop button.
             startButton.disabled = true;
             stopButton.disabled = false;
-            getInsightButton.disabled = false; // LLM button remains active
-            generateBifurcationButton.disabled = false; // Bifurcation button remains active
+            // Other buttons like Get Insight and Generate Bifurcation remain enabled or disabled based on their last state.
 
-            console.log("Buttons state: Start disabled, Stop enabled, AI & Bifurcation enabled.");
+            console.log("Buttons state: Start disabled, Stop enabled.");
 
             // Set up the recurring interval for running simulation steps.
             try {
@@ -689,9 +717,6 @@
                 // Restore button states if an error occurs during interval setup.
                 startButton.disabled = false;
                 stopButton.disabled = true;
-                getInsightButton.disabled = false;
-                generateBifurcationButton.disabled = false;
-                console.log("Buttons state after interval setup error: Start enabled, Stop disabled, AI & Bifurcation enabled.");
             }
         }
 
@@ -713,9 +738,8 @@
             // Update button states after stopping the simulation.
             startButton.disabled = false; // Enable start button.
             stopButton.disabled = true; // Disable stop button.
-            getInsightButton.disabled = false; // Ensure AI Insight button is enabled.
-            generateBifurcationButton.disabled = false; // Ensure Bifurcation button is enabled.
-            console.log("Buttons state: Start enabled, Stop disabled, AI & Bifurcation enabled.");
+            // Other buttons like Get Insight and Generate Bifurcation remain enabled.
+            console.log("Buttons state: Start enabled, Stop disabled.");
 
             // Stop the pond animation requestFrame loop if it's active.
             if (pondAnimationFrameId) {
@@ -1226,7 +1250,7 @@
 
             const chatHistory = [{ role: "user", parts: [{ text: prompt }] }];
             const payload = { contents: chatHistory };
-            const apiKey = "AIzaSyBe4FaOSzP9GaqTpcvW8lV-wKRu9nH82sA"; // Canvas will provide this API key at runtime
+            const apiKey = ""; // Canvas will provide this API key at runtime
 
             const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
 
@@ -1294,7 +1318,7 @@
             } else { // r >= 3.569
                 r_behavior_description = "The goldfish population is in a truly chaotic regime, making long-term prediction practically impossible despite deterministic rules.";
                 chaos_explanation_specific = "In this chaotic state, the simulation demonstrates **extreme sensitive dependence on initial conditions, known as the 'butterfly effect.'** This means even if we could precisely know every parameter, a minute, unmeasurable difference (like the smallest fraction of a fish or a microscopic environmental change in the pond) would lead to entirely divergent population trajectories over time. The 'randomness factor' further amplifies this inherent unpredictability, ensuring the observed population behavior never precisely repeats and appears genuinely random in its time series, even though it's fundamentally governed by the simple logistic equation.";
-                return_map_explanation = "Despite the seemingly random behavior in the time series chart, the Return Map remains a powerful tool. It will clearly show that *all* generated points still fall precisely on the parabolic curve of the logistic map. This emphatically highlights the deterministic nature of chaos; the system follows an exact rule. However, instead of clustering into fixed points or simple cycles, the points will fill a continuous segment of the parabola, demonstrating the system's unbounded yet structured unpredictability. Randomness will cause these points to scatter slightly *off* the perfect parabolic line, visually indicating how external noise perturbs the underlying deterministic chaotic system. The dense, irregular spread of points across the parabola, rather than converging, is a visual signature of the chaotic 'attractor.'";
+                return_map_explanation = "Despite the seemingly random behavior in the time series chart, the Return Map remains a powerful tool. It will clearly show that *all* generated points still fall precisely on the parabolic curve of the logistic map. This emphatically highlights the deterministic nature of chaos; the system follows an exact rule. However, instead of clustering into fixed points or simple cycles, the points will fill a continuous segment of the parabola, demonstrating the system's unbounded yet structured unpredictability. Randomness will cause these points to scatter slightly *off* the perfect parabolic line, visually indicating how external noise disturbs the underlying deterministic chaotic system. The dense, irregular spread of points across the parabola, rather than converging, is a visual signature of the chaotic 'attractor.'";
             }
 
             // Determine current population trend
