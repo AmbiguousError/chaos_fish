@@ -151,11 +151,11 @@
         }
 
         /* New button styles for LLM features */
-        button#getInsightButton { /* Only one LLM button now */
+        button#getInsightButton, button#generateBifurcationButton { /* Added bifurcation button */
             background-color: #6f42c1; /* Purple color */
             color: white;
         }
-        button#getInsightButton:hover:not(:disabled) {
+        button#getInsightButton:hover:not(:disabled), button#generateBifurcationButton:hover:not(:disabled) {
             background-color: #563391;
         }
 
@@ -326,7 +326,7 @@
         }
 
         /* New styles for the return map chart */
-        .return-map-container {
+        .return-map-container, .bifurcation-map-container { /* Added bifurcation container */
             width: 100%; /* Take full width below simulation area */
             background-color: #f8f9fa;
             padding: 20px;
@@ -337,7 +337,7 @@
             margin-right: auto;
             max-width: 800px; /* Match other content max-width */
         }
-        #returnMapCanvas {
+        #returnMapCanvas, #bifurcationMapCanvas { /* Added bifurcation canvas */
             border: 1px solid #ccc;
             background-color: #fff;
             display: block;
@@ -354,7 +354,7 @@
             .simulation-area {
                 flex-direction: column; /* Stack chart and values */
             }
-            .chart-container, .current-values, .pond-container, .return-map-container { /* Include pond and return map in stacking */
+            .chart-container, .current-values, .pond-container, .return-map-container, .bifurcation-map-container { /* Include pond and return map in stacking */
                 min-width: unset; /* Remove min-width to allow full flexibility */
                 width: 100%;
                 border-radius: 8px; /* Square off pond on mobile for better fit */
@@ -419,6 +419,7 @@
             <button id="stopButton" disabled>Stop Simulation</button>
             <button id="resetButton">Reset Simulation</button>
             <button id="getInsightButton">Get Population Insight ✨</button>
+            <button id="generateBifurcationButton">Generate Bifurcation Diagram 📈</button>
         </div>
 
         <div class="simulation-area">
@@ -452,6 +453,13 @@
             <canvas id="returnMapCanvas" width="800" height="400"></canvas>
         </div>
 
+        <!-- New section for the Bifurcation Diagram Chart -->
+        <div class="bifurcation-map-container">
+            <h2>Bifurcation Diagram (Attractors vs. Growth Rate 'r')</h2>
+            <p class="description">This diagram shows the long-term population values (attractors) for each growth rate 'r'. It visually demonstrates the transition from stable points to periodic cycles, and then to chaotic behavior (the dense, filled regions), illustrating the pathway to chaos for the goldfish population.</p>
+            <canvas id="bifurcationMapCanvas" width="800" height="400"></canvas>
+        </div>
+
         <!-- Area to display LLM output - MOVED HERE and simplified for single output -->
         <div id="llmOutputArea">
             <h3>AI-Generated Insight:</h3>
@@ -476,11 +484,12 @@
         const resetButton = document.getElementById('resetButton');
 
         const getInsightButton = document.getElementById('getInsightButton');
+        const generateBifurcationButton = document.getElementById('generateBifurcationButton'); // New button
         const llmOutputArea = document.getElementById('llmOutputArea');
         const llmOutputTitle = llmOutputArea.querySelector('h3'); // Reference the h3 for dynamic title
         const llmOutputText = document.getElementById('llmOutputText');
 
-        // New Moving Average DOM elements
+        // Moving Average DOM elements
         const movingAverageEnabledCheckbox = document.getElementById('movingAverageEnabled');
         const movingAverageWindowSlider = document.getElementById('movingAverageWindow');
         const movingAverageWindowValueSpan = document.getElementById('movingAverageWindowValue');
@@ -519,6 +528,16 @@
         }
         if (!returnMapCtx) {
             console.error("Error: 2D context could not be obtained from return map canvas!");
+        }
+
+        // Canvas for Bifurcation Map
+        const bifurcationMapCanvas = document.getElementById('bifurcationMapCanvas'); // New canvas element
+        const bifurcationMapCtx = bifurcationMapCanvas ? bifurcationMapCanvas.getContext('2d') : null; // New context
+        if (!bifurcationMapCanvas) {
+            console.error("Error: Bifurcation Map Canvas element not found!");
+        }
+        if (!bifurcationMapCtx) {
+            console.error("Error: 2D context could not be obtained from bifurcation map canvas!");
         }
 
 
@@ -564,6 +583,8 @@
             updateDisplay(); // Update the displayed current values
             drawChart(); // Draw the initial state on the population chart
             drawReturnMap(); // Draw the initial state on the return map chart
+            drawBifurcationMapInitialState(); // Initialize bifurcation map
+
             console.log(`Initial state set: r=${r.toFixed(2)}, x=${x.toFixed(4)}, ` +
                         `randomnessFactor=${randomnessFactor.toFixed(3)}, randomnessFrequency=${randomnessFrequency.toFixed(2)}`);
 
@@ -584,6 +605,12 @@
                 const container = returnMapCanvas.parentElement;
                 returnMapCanvas.width = container.clientWidth;
                 returnMapCanvas.height = container.clientHeight;
+            }
+             // Ensure bifurcation map canvas is sized correctly on init
+            if (bifurcationMapCanvas) {
+                const container = bifurcationMapCanvas.parentElement;
+                bifurcationMapCanvas.width = container.clientWidth;
+                bifurcationMapCanvas.height = container.clientHeight;
             }
 
              // Reset LLM output area on initialization
@@ -748,6 +775,7 @@
 
         // --- LLM Feature Event Listeners ---
         getInsightButton.addEventListener('click', getPopulationInsight);
+        generateBifurcationButton.addEventListener('click', generateBifurcationDiagram); // New event listener
 
 
         // --- Main Simulation Loop Logic ---
@@ -1045,6 +1073,112 @@
             }
         }
 
+        // --- Draw Bifurcation Map (Initial State) Function ---
+        function drawBifurcationMapInitialState() {
+            if (!bifurcationMapCtx) {
+                console.error("Bifurcation Map Canvas 2D context is not available for drawing.");
+                return;
+            }
+            bifurcationMapCtx.clearRect(0, 0, bifurcationMapCanvas.width, bifurcationMapCanvas.height); // Clear entire canvas
+
+            const padding = 50;
+            const chartWidth = bifurcationMapCanvas.width - padding;
+            const chartHeight = bifurcationMapCanvas.height - padding;
+
+            // Draw axes
+            bifurcationMapCtx.beginPath();
+            bifurcationMapCtx.strokeStyle = '#999';
+            bifurcationMapCtx.lineWidth = 1;
+            bifurcationMapCtx.moveTo(padding, 0); bifurcationMapCtx.lineTo(padding, chartHeight); // Y-axis
+            bifurcationMapCtx.moveTo(padding, chartHeight); bifurcationMapCtx.lineTo(bifurcationMapCanvas.width, chartHeight); // X-axis
+            bifurcationMapCtx.stroke();
+
+            // Labels
+            bifurcationMapCtx.fillStyle = '#555';
+            bifurcationMapCtx.font = '12px Arial';
+            bifurcationMapCtx.textAlign = 'right';
+            bifurcationMapCtx.textBaseline = 'middle';
+            bifurcationMapCtx.fillText('1.0', padding - 10, 0 + 10);
+            bifurcationMapCtx.fillText('0.5', padding - 10, chartHeight / 2);
+            bifurcationMapCtx.fillText('0.0', padding - 10, chartHeight - 5);
+            bifurcationMapCtx.textAlign = 'center';
+            bifurcationMapCtx.textBaseline = 'top';
+            bifurcationMapCtx.fillText('Growth Rate (r)', padding + chartWidth / 2, chartHeight + 10);
+            bifurcationMapCtx.save();
+            bifurcationMapCtx.translate(padding - 30, chartHeight / 2);
+            bifurcationMapCtx.rotate(-Math.PI / 2);
+            bifurcationMapCtx.fillText('Long-Term Population (x)', 0, 0);
+            bifurcationMapCtx.restore();
+
+            bifurcationMapCtx.fillStyle = '#666';
+            bifurcationMapCtx.textAlign = 'center';
+            bifurcationMapCtx.textBaseline = 'middle';
+            bifurcationMapCtx.fillText('Click "Generate Bifurcation Diagram" to plot', bifurcationMapCanvas.width / 2, bifurcationMapCanvas.height / 2);
+        }
+
+        // --- Generate Bifurcation Diagram Function ---
+        async function generateBifurcationDiagram() {
+            if (!bifurcationMapCtx) {
+                console.error("Bifurcation Map Canvas 2D context is not available for drawing.");
+                return;
+            }
+            if (generation !== 0) { // Only allow generation from reset state to avoid confusion
+                displayMessage("Reset Simulation", "Please reset the simulation first to generate a new Bifurcation Diagram cleanly.");
+                return;
+            }
+
+            bifurcationMapCtx.clearRect(0, 0, bifurcationMapCanvas.width, bifurcationMapCanvas.height); // Clear existing points
+            drawBifurcationMapInitialState(); // Redraw axes/labels
+
+            displayMessage("Generating Bifurcation Diagram", "loading");
+            generateBifurcationButton.disabled = true;
+            getInsightButton.disabled = true; // Disable other AI button during generation
+
+            const rStart = 0.1;
+            const rEnd = 4.0;
+            const rSteps = 1000; // Number of r values to test
+            const initialTransient = 200; // Number of iterations to discard to let system settle
+            const plotIterations = 100; // Number of subsequent iterations to plot
+
+            const padding = 50;
+            const chartWidth = bifurcationMapCanvas.width - padding;
+            const chartHeight = bifurcationMapCanvas.height - padding;
+
+            bifurcationMapCtx.fillStyle = '#000080'; // Dark blue for dots
+            bifurcationMapCtx.globalAlpha = 0.3; // Make points semi-transparent for density
+
+            for (let i = 0; i <= rSteps; i++) {
+                const currentR = rStart + (rEnd - rStart) * (i / rSteps);
+                let currentX = 0.5; // Start each r value with a fixed initial x
+
+                // Skip transient iterations
+                for (let j = 0; j < initialTransient; j++) {
+                    currentX = currentR * currentX * (1 - currentX);
+                    currentX = Math.max(0, Math.min(1, currentX)); // Keep within bounds
+                }
+
+                // Plot the next 'plotIterations' values
+                for (let k = 0; k < plotIterations; k++) {
+                    currentX = currentR * currentX * (1 - currentX);
+                    currentX = Math.max(0, Math.min(1, currentX)); // Keep within bounds
+
+                    const plotX = padding + (currentR - rStart) / (rEnd - rStart) * chartWidth;
+                    const plotY = chartHeight - currentX * chartHeight;
+
+                    bifurcationMapCtx.fillRect(plotX, plotY, 1, 1); // Draw a small dot
+                }
+
+                await new Promise(resolve => setTimeout(resolve, 0)); // Yield to keep UI responsive
+            }
+
+            bifurcationMapCtx.globalAlpha = 1.0; // Reset alpha
+            hideMessageBox();
+            generateBifurcationButton.disabled = false;
+            getInsightButton.disabled = false;
+            displayMessage("Bifurcation Diagram Generated!", "The bifurcation diagram has been plotted. Observe how the population's long-term behavior changes with the growth rate (r).");
+            console.log("Bifurcation diagram generation complete.");
+        }
+
 
         // --- Custom Message Box Function (to replace native alert() for better UI) ---
         function displayMessage(title, message) {
@@ -1143,6 +1277,7 @@
             llmOutputText.innerHTML = '<div class="loading-spinner"></div> Generating...'; // Show loading spinner
             // Disable LLM buttons while API call is in progress
             getInsightButton.disabled = true;
+            generateBifurcationButton.disabled = true;
 
             console.log("Calling Gemini API with prompt:", prompt);
 
@@ -1185,6 +1320,7 @@
                 llmOutputText.textContent = generatedText;
                 // Re-enable LLM buttons
                 getInsightButton.disabled = false;
+                generateBifurcationButton.disabled = false;
             }
         }
 
@@ -1200,7 +1336,7 @@
                 return_map_explanation = "On the Return Map (Phase Space Plot), you will observe points converging rapidly to a single point where the parabola intersects the $y=x$ diagonal line, indicating a stable equilibrium. Randomness may cause slight scatter around this point, but the underlying attraction to this single equilibrium remains clear. This visual perfectly demonstrates the deterministic stability of the system.";
             } else if (r >= 3.0 && r < 3.449) {
                 r_behavior_description = "The goldfish population will oscillate predictably between two or more fixed sizes in a regular cycle (period doubling).";
-                chaos_explanation_specific = "The simulation exhibits oscillatory behavior, often seen as period-doubling bifurcations before true chaos. While the population fluctuates, it follows a predictable pattern of values, repeatedly cycling through the same set of sizes. Sensitive dependence is minimal at this stage; randomness primarily introduces noise around these predictable cycles, making the oscillations slightly imperfect.";
+                chaos_explanation_specific = "The simulation exhibits oscillatory behavior, often seen as period-doubling bifurcations before true chaos. While the population fluctuates, it follows a predictable pattern of values, repeatedly cycling through the same set of sizes. Sensitive dependence is minimal; randomness primarily introduces noise around these predictable cycles, making the oscillations slightly imperfect.";
                 return_map_explanation = "On the Return Map, points will jump back and forth between 2 or more distinct points on the parabola, forming a recognizable cycle (e.g., a two-point or four-point attractor). This clearly demonstrates deterministic oscillation. Randomness will appear as slight deviations, causing the plotted points to form small clouds around these exact cycle points rather than being perfectly on them, showing how external factors perturb the underlying cycle.";
             } else if (r >= 3.449 && r < 3.569) {
                 r_behavior_description = "The goldfish population will exhibit more complex, multi-period oscillations, on the very edge of chaos.";
@@ -1232,6 +1368,9 @@
             // Explanation of fish population
             const fish_population_explanation = `In this simulation, the 'population (x)' represents the goldfish population as a normalized value between 0 and 1. '0' signifies extinction (no fish in the pond), while '1' represents the maximum carrying capacity of the pond (the largest population the environment can sustainably support, given resources). This normalization allows us to focus on the proportional changes and dynamics of the population relative to its environmental limits, simplifying the complexity of tracking exact large numbers of individual fish while still illustrating fundamental ecological principles.`;
 
+            // Explanation of Bifurcation Diagram (to be added)
+            const bifurcation_diagram_explanation = "The Bifurcation Diagram (which can be generated by clicking its button) provides a global view of the system's long-term behavior across the entire range of 'r' values. It visually demonstrates the transition from stable population sizes to predictable oscillations (period doubling) and then into the dense, unpredictable regions characteristic of chaos. This diagram is crucial for seeing the 'road to chaos' and understanding how sensitive the system's overall behavior is to changes in its growth rate 'r'.";
+
 
             const insightPrompt = `This simulation models goldfish population dynamics using the logistic map (P_next = r * P * (1 - P)) and incorporates random perturbations. It visually demonstrates the **Butterfly Effect** and the principles of chaos theory.
 
@@ -1240,6 +1379,7 @@
             - **Current Trend:** ${x_trend_description}
             - **Chaos Theory & The Butterfly Effect in the Pond:** This simulation vividly exemplifies how even simple, deterministic rules can lead to profound long-term unpredictability in the goldfish population. For 'r' values in the chaotic range, a minute, unmeasurable difference in the initial goldfish population, or a tiny random event (like a single extra mosquito larva for food or an unexpected mild day), will cause the entire population trajectory to diverge wildly and unpredictably over time. This is the core of the 'butterfly effect' – where small, seemingly insignificant causes lead to large, unforeseen differences in the pond's fish numbers. The system is inherently deterministic, following the logistic map, yet its long-term state is practically unknowable.
             - **Visualizing Chaos with the Return Map:** The Phase Space Plot (Return Map) is a crucial tool for understanding this. It plots the current population ($x_n$) against the next ($x_{n+1}$). It always shows points on the parabolic curve derived from the logistic map, confirming the deterministic rule. However, in chaotic regimes, instead of settling into fixed points or simple cycles, the points densely fill a section of the parabola, showcasing the 'strange attractor' and the system's bounded yet unpredictable nature. Randomness causes points to scatter slightly *off* this perfect curve, representing external disturbances.
+            - **Global View: The Bifurcation Diagram:** ${bifurcation_diagram_explanation}
             - **Impact of Randomness:** ${randomness_effect}
 
             Provide a comprehensive, concise analysis explaining how these elements interact to produce the observed simulation results, focusing on the manifestation of the butterfly effect and the role of both chaos and randomness in the goldfish population. Keep the explanation to about 10-15 sentences.`;
@@ -1272,6 +1412,12 @@
                     const container = returnMapCanvas.parentElement;
                     returnMapCanvas.width = container.clientWidth;
                     returnMapCanvas.height = container.clientWidth * (400/800); // Maintain aspect ratio
+                }
+                if (bifurcationMapCanvas) {
+                    const container = bifurcationMapCanvas.parentElement;
+                    bifurcationMapCanvas.width = container.clientWidth;
+                    bifurcationMapCanvas.height = container.clientWidth * (400/800); // Maintain aspect ratio
+                    drawBifurcationMapInitialState(); // Redraw labels
                 }
 
                 drawChart(); // Redraw chart on resize too
